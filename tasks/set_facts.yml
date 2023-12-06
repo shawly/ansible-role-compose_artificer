@@ -5,10 +5,31 @@
   ansible.builtin.setup:
   when: not ansible_facts
 
+- name: set_facts | Assert mandatory vars are set
+  ansible.builtin.assert:
+    that:
+      - compose_artificer_role_prefix is defined
+      - compose_artificer_role_prefix != ''
+      - compose_artificer_role_prefix != role_name 
+      - compose_artificer_compose_project_name is defined
+      - compose_artificer_compose_project_name != ''
+      - compose_artificer_compose_project_name != role_name 
+    fail_msg: 
+      - "compose_artificer_role_prefix must be set and must not be set to {{ role_name }}"
+      - "compose_artificer_compose_project_name must be set and must not be set to {{ role_name }}"
+    success_msg: 
+      - "compose_artificer_role_prefix is set to {{ compose_artificer_role_prefix }}"
+      - "compose_artificer_compose_project_name is set to {{ compose_artificer_compose_project_name }}"
+
+- name: set_facts | Set artificer vars
+  ansible.builtin.set_fact:
+    __role_prefix: "{{ compose_artificer_role_prefix }}"
+    __compose_project_name: "{{ compose_artificer_compose_project_name }}"
+
 - name: set_facts | Slurp /etc/unraid-version
   ansible.builtin.slurp:
     src: /etc/unraid-version
-  register: unraid_version
+  register: __unraid_version
   when: ansible_facts.os_family == 'Slackware' and ('unraid' in ansible_facts.kernel | lower) | bool
 
 - name: set_facts | Override os facts for UnRaid
@@ -17,17 +38,17 @@
       - path: ansible_facts.distribution
         value: Unraid
       - path: ansible_facts.distribution_version
-        value: "{{ unraid_version.content | b64decode | regex_replace('version=\"([0-9\\.]+)\"', '\\1') | trim }}"
+        value: "{{ __unraid_version.content | b64decode | regex_replace('version=\"([0-9\\.]+)\"', '\\1') | trim }}"
       - path: ansible_facts.distribution_major_version
-        value: "{{ unraid_version.content | b64decode | regex_replace('version=\"([0-9]+)\\..*\"', '\\1') | trim }}"
+        value: "{{ __unraid_version.content | b64decode | regex_replace('version=\"([0-9]+)\\..*\"', '\\1') | trim }}"
       - path: ansible_facts.distribution_file_path
         value: /etc/unraid-version
       - path: ansible_facts.ansible_distribution
         value: Unraid
       - path: ansible_facts.ansible_distribution_version
-        value: "{{ unraid_version.content | b64decode | regex_replace('version=\"([0-9\\.]+)\"', '\\1') | trim }}"
+        value: "{{ __unraid_version.content | b64decode | regex_replace('version=\"([0-9\\.]+)\"', '\\1') | trim }}"
       - path: ansible_facts.ansible_distribution_major_version
-        value: "{{ unraid_version.content | b64decode | regex_replace('version=\"([0-9]+)\\..*\"', '\\1') | trim }}"
+        value: "{{ __unraid_version.content | b64decode | regex_replace('version=\"([0-9]+)\\..*\"', '\\1') | trim }}"
       - path: ansible_facts.ansible_distribution_file_path
         value: /etc/unraid-version
   changed_when: false
@@ -37,7 +58,6 @@
   ansible.builtin.include_vars:
     file: "{{ item }}"
     name: os_vars
-  # noqa: loop-var-prefix[missing]
   # noqa loop-var-prefix[missing]
   with_first_found:
     - files:
@@ -54,36 +74,36 @@
 # we add ^ and $ to denote start and end of string, so this returns only exact matches
 - name: set_facts | Set OS dependent variables, if not already defined by user
   ansible.builtin.set_fact:
-    # noqa: var-naming[no-jinja]
+    # noqa var-naming[no-jinja]
     "{{ item.key }}": "{{ item.value }}"
-  # noqa: loop-var-prefix[missing]
+  # noqa loop-var-prefix[missing]
   with_dict: "{{ os_vars | default({}) }}"
 
-- name: set_facts | Set variables for docker-compose
+- name: set_facts | Set variables for compose project
   ansible.builtin.set_fact:
-    project_name: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_compose_project_name') }}"
-    data_dir: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_project_data_dir', default=__compose_artificer_default_data_dir) }}"
-    install_dir: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_project_install_dir', default=__compose_artificer_default_install_dir) }}"
-    old_install_dir: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_old_install_dir', default=omit) }}"
-    old_host: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_old_host', default=omit) }}"
-    docker_compose_files: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_docker_compose_files', default=omit) }}"
-    zfs_skip_snapshot: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_zfs_skip_snapshot', default=false) }}"
-    healthcheck_timer: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_healthcheck_timer', default='disabled') }}"
-    traefik_domain: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_traefik_domain', default=omit) }}"
-    traefik_subdomain: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_traefik_subdomain', default=omit) }}"
-    traefik_port: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_traefik_port', default=omit) }}"
-    docker_compose_overrides: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_compose_overrides') }}"
-    maintenance: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_maintenance', default=false) }}"
+    project_name: "{{ lookup('ansible.builtin.vars', __role_prefix + '_compose_project_name') }}"
+    data_dir: "{{ lookup('ansible.builtin.vars', __role_prefix + '_project_data_dir', default=__compose_artificer_default_data_dir) }}"
+    install_dir: "{{ lookup('ansible.builtin.vars', __role_prefix + '_project_install_dir', default=__compose_artificer_default_install_dir) }}"
+    old_install_dir: "{{ lookup('ansible.builtin.vars', __role_prefix + '_old_install_dir', default=omit) }}"
+    old_host: "{{ lookup('ansible.builtin.vars', __role_prefix + '_old_host', default=omit) }}"
+    docker_compose_files: "{{ lookup('ansible.builtin.vars', __role_prefix + '_docker_compose_files', default=omit) }}"
+    zfs_skip_snapshot: "{{ lookup('ansible.builtin.vars', __role_prefix + '_zfs_skip_snapshot', default=false) }}"
+    healthcheck_timer: "{{ lookup('ansible.builtin.vars', __role_prefix + '_healthcheck_timer', default='disabled') }}"
+    traefik_domain: "{{ lookup('ansible.builtin.vars', __role_prefix + '_traefik_domain', default=omit) }}"
+    traefik_subdomain: "{{ lookup('ansible.builtin.vars', __role_prefix + '_traefik_subdomain', default=omit) }}"
+    traefik_port: "{{ lookup('ansible.builtin.vars', __role_prefix + '_traefik_port', default=omit) }}"
+    docker_compose_overrides: "{{ lookup('ansible.builtin.vars', __role_prefix + '_compose_overrides') }}"
+    maintenance: "{{ lookup('ansible.builtin.vars', __role_prefix + '_maintenance', default=false) }}"
 
 - name: set_facts | Set UnRAID specific variables for composeman
   ansible.builtin.set_fact:
     __unraid_service:
       labels:
         net.unraid.docker.managed: composeman
-        net.unraid.docker.icon: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_unraid_icon', default=__compose_artificer_unraid_icon) }}"
-        net.unraid.docker.webui: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_unraid_webui', default=__compose_artificer_unraid_webui) }}"
-        net.unraid.docker.shell: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_unraid_shell', default=__compose_artificer_unraid_shell) }}"
-    unraid_description: "{{ lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_unraid_description') | mandatory }}"
+        net.unraid.docker.icon: "{{ lookup('ansible.builtin.vars', __role_prefix + '_unraid_icon', default=__compose_artificer_unraid_icon) }}"
+        net.unraid.docker.webui: "{{ lookup('ansible.builtin.vars', __role_prefix + '_unraid_webui', default=__compose_artificer_unraid_webui) }}"
+        net.unraid.docker.shell: "{{ lookup('ansible.builtin.vars', __role_prefix + '_unraid_shell', default=__compose_artificer_unraid_shell) }}"
+    unraid_description: "{{ lookup('ansible.builtin.vars', __role_prefix + '_unraid_description') | mandatory }}"
   when: ansible_distribution == 'Unraid'
 
 - name: set_facts | Set variables for project directories
@@ -91,16 +111,16 @@
     project_dirs: >-
       {{
         __compose_artificer_default_compose_project_dirs |
-        ansible.builtin.combine(lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_default_compose_project_dirs'),
-        lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_compose_project_dirs'))
+        ansible.builtin.combine(lookup('ansible.builtin.vars', __role_prefix + '_default_compose_project_dirs'),
+        lookup('ansible.builtin.vars', __role_prefix + '_compose_project_dirs'))
       }}
 
 - name: set_facts | Set variables for additional project dirs
   ansible.builtin.set_fact:
-    # noqa: var-naming[no-jinja]
+    # noqa var-naming[no-jinja]
     "{{ item.key }}": "{{ item.value }}"
   when: not lookup('varnames', '^' + item.key + '$')
-  # noqa: loop-var-prefix[missing]
+  # noqa loop-var-prefix[missing]
   with_dict: "{{ project_dirs | default({}) }}"
 
 - name: set_facts | Load docker-compose.yml
@@ -125,28 +145,28 @@
 - name: set_facts | Update docker_compose_vars
   ansible.utils.update_fact:
     updates: "{{ docker_compose_updates }}"
-  register: updated
+  register: __updated
   changed_when: false
 
 - name: set_facts | Merge overrides
   ansible.builtin.set_fact:
-    docker_compose_merged: "{{ updated.docker_compose_vars | combine(docker_compose_overrides, recursive=true, list_merge='append_rp') }}"
+    docker_compose_merged: "{{ __updated.docker_compose_vars | combine(docker_compose_overrides, recursive=true, list_merge='append_rp') }}"
 
 - name: set_facts | Update variables for project directories
   ansible.builtin.set_fact:
     project_dirs: >-
       {{
         __compose_artificer_default_compose_project_dirs |
-        ansible.builtin.combine(lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_default_compose_project_dirs'),
-        lookup('ansible.builtin.vars', compose_artificer_role_prefix + '_compose_project_dirs'))
+        ansible.builtin.combine(lookup('ansible.builtin.vars', __role_prefix + '_default_compose_project_dirs'),
+        lookup('ansible.builtin.vars', __role_prefix + '_compose_project_dirs'))
       }}
 
 - name: set_facts | Update variables for additional project dirs
   ansible.builtin.set_fact:
-    # noqa: var-naming[no-jinja]
+    # noqa var-naming[no-jinja]
     "{{ item.key }}": "{{ item.value }}"
   when: not lookup('varnames', '^' + item.key + '$')
-  # noqa: loop-var-prefix[missing]
+  # noqa loop-var-prefix[missing]
   with_dict: "{{ project_dirs | default({}) }}"
 
 - name: set_facts | Pretty print docker-compose.yml

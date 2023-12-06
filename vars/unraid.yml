@@ -1,13 +1,13 @@
 ---
 __compose_artificer_default_install_dir:
-  dir: /boot/config/plugins/compose.manager/projects/{{ compose_artificer_compose_project_name | mandatory }}
+  dir: /boot/config/plugins/compose.manager/projects/{{ __compose_project_name | mandatory }}
   mode: "0700"
 
 __compose_artificer_default_data_dir:
-  dir: /mnt/appdata/{{ compose_artificer_compose_project_name | mandatory }}
+  dir: /mnt/appdata/{{ __compose_project_name | mandatory }}
   mode: "0755"
 
 __compose_artificer_unraid_description:
-__compose_artificer_unraid_icon: /mnt/user/system/plugins/dynamix.docker.manager/images/{{ compose_artificer_compose_project_name | mandatory }}-icon.png
-__compose_artificer_unraid_webui: https://{{ compose_artificer_compose_project_name | mandatory }}.{{ traefik_domain | default('example.com') }}
+__compose_artificer_unraid_icon: /mnt/user/system/plugins/dynamix.docker.manager/images/{{ __compose_project_name | mandatory }}-icon.png
+__compose_artificer_unraid_webui: https://{{ __compose_project_name | mandatory }}.{{ traefik_domain | default('example.com') }}
 __compose_artificer_unraid_shell: sh

@@ -53,7 +53,6 @@
     owner: root
     group: root
     mode: "0644"
-  # noqa: loop-var-prefix[missing]
   # noqa loop-var-prefix[missing]
   with_fileglob:
     - unraid/icons/containers/{{ project_name }}.png
