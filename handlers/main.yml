@@ -1,0 +1,9 @@
+---
+# handlers file for compose_artificer
+
+- name: Restart services
+  become: true
+  community.docker.docker_compose:
+    project_src: "{{ install_dir.dir }}/"
+    restarted: true
+  when: not _docker_compose.changed

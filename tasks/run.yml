@@ -1,0 +1,30 @@
+---
+- name: run | Execute docker compose config for validation
+  become: true
+  ansible.builtin.command:
+    cmd: docker compose -f {{ __docker_compose_files }} config
+    chdir: "{{ install_dir.dir }}"
+  register: _docker_compose_validation
+  vars:
+    __docker_compose_files: "{{ docker_compose_files | default(['docker-compose.yml']) | join(' -f ') }}"
+  failed_when: _docker_compose_validation.rc != 0
+  changed_when: _docker_compose_validation.rc != 0
+  when: not ansible_check_mode
+
+- name: run | Ensure services are started
+  become: true
+  community.docker.docker_compose:
+    project_src: "{{ install_dir.dir }}/"
+    state: present
+    remove_orphans: true
+    files: "{{ docker_compose_files | default(omit) }}"
+  when: not maintenance and not ansible_check_mode
+
+- name: run | Shut down services
+  become: true
+  community.docker.docker_compose:
+    project_src: "{{ install_dir.dir }}/"
+    state: absent
+    remove_orphans: true
+    files: "{{ docker_compose_files | default(omit) }}"
+  when: maintenance and not ansible_check_mode

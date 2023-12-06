@@ -1,0 +1,48 @@
+---
+- name: migrate | Check if old_install_dir exists
+  ansible.builtin.stat:
+    path: "{{ old_install_dir }}"
+  register: __old_install_dir
+  when: old_install_dir is defined and old_install_dir != install_dir.dir
+
+- name: migrate | Shut down all services
+  become: true
+  community.docker.docker_compose:
+    project_src: "{{ old_install_dir }}/"
+    state: absent
+    remove_orphans: true
+    files: "{{ docker_compose_files | default(omit) }}"
+  when: old_install_dir is defined and old_install_dir != install_dir.dir and __old_install_dir.stat.exists
+
+- name: migrate | Create dataset for {{ project_name }}
+  become: true
+  community.general.zfs:
+    name: "{{ zfs_ubuntu_root_pool }}{{ install_dir.dir }}"
+    state: present
+  register: zfs_dataset
+  when: "'zfs' in group_names and old_install_dir is defined"
+
+- name: migrate | Migrate data from old location to default location
+  become: true
+  ansible.posix.synchronize:
+    src: "{{ old_install_dir }}/"
+    dest: "{{ install_dir.dir }}/"
+  delegate_to: "{{ inventory_hostname }}"
+  register: __migration
+  when: old_install_dir is defined and not old_host is defined and old_install_dir != install_dir.dir and __old_install_dir.stat.exists
+
+# - name: migrate | Migrate data from old host location to default location
+#   become: true
+#   ansible.posix.synchronize:
+#     mode: pull
+#     src: ths@{{ old_host }}:/{{ old_install_dir }}
+#     dest: "{{ install_dir.dir }}/"
+#   delegate_to: "{{ inventory_hostname }}"
+#   register: __migration
+#   when: old_install_dir is defined and old_host is defined
+
+- name: migrate | Confirm message
+  ansible.builtin.debug:
+    msg: Data migrated from {{ old_install_dir }} to {{ install_dir.dir }}
+  when: __migration.changed and old_install_dir is defined and old_install_dir != install_dir.dir and __old_install_dir.stat.exists
+  changed_when: __migration.changed

@@ -1,0 +1,4 @@
+---
+# defaults file for compose_artificer
+
+compose_artificer_timezone: Europe/Berlin
