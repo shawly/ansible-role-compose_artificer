@@ -1,48 +1,61 @@
 ---
-- name: migrate | Check if old_install_dir exists
-  ansible.builtin.stat:
-    path: "{{ old_install_dir }}"
-  register: __old_install_dir
-  when: old_install_dir is defined and old_install_dir != install_dir.dir
+- name: migrate | Block
+  vars:
+    __migrate_dir: "{{ lookup('vars', __role_prefix + '_migrate_dir') | default(omit) }}"
+    __compose_install_dir: "{{ lookup('vars', __role_prefix + '_compose_install_dir') }}"
+    __compose_project_root_dir: "{{ lookup('vars', __role_prefix + '_compose_project_root_dir') }}"
+    __docker_compose_files: "{{ lookup('vars', __role_prefix + '_docker_compose_files') | default(omit) }}"
+    __do_migrate: __migrate_dir is defined and __migrate_dir != __compose_install_dir.dir and __migrate_dir != __compose_project_root_dir.dir
+  when: __do_migrate
+  block:
+    - name: migrate | Check if migrate_dir exists
+      become: true
+      ansible.builtin.stat:
+        path: "{{ __migrate_dir }}"
+      register: __migrate_dir_result
 
-- name: migrate | Shut down all services
-  become: true
-  community.docker.docker_compose:
-    project_src: "{{ old_install_dir }}/"
-    state: absent
-    remove_orphans: true
-    files: "{{ docker_compose_files | default(omit) }}"
-  when: old_install_dir is defined and old_install_dir != install_dir.dir and __old_install_dir.stat.exists
+    - name: migrate | Shut down all services
+      become: true
+      community.docker.docker_compose:
+        project_src: "{{ __migrate_dir }}/"
+        state: absent
+        remove_orphans: true
+        files: "{{ __docker_compose_files | default(omit) }}"
+      when: __migrate_dir_result.stat.exists
 
-- name: migrate | Create dataset for {{ project_name }}
-  become: true
-  community.general.zfs:
-    name: "{{ zfs_ubuntu_root_pool }}{{ install_dir.dir }}"
-    state: present
-  register: zfs_dataset
-  when: "'zfs' in group_names and old_install_dir is defined"
+    - name: migrate | Create datasets for {{ __compose_project_name }}
+      become: true
+      community.general.zfs:
+        name: "{{ zfs_host_root_pool }}{{ __dataset }}"
+        state: present
+      register: zfs_dataset
+      when: "'zfs' in group_names and __migrate_dir_result.stat.exists"
+      loop: "{{ __datasets }}"
+      loop_control:
+        loop_var: __dataset
+      vars:
+        __datasets: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
 
-- name: migrate | Migrate data from old location to default location
-  become: true
-  ansible.posix.synchronize:
-    src: "{{ old_install_dir }}/"
-    dest: "{{ install_dir.dir }}/"
-  delegate_to: "{{ inventory_hostname }}"
-  register: __migration
-  when: old_install_dir is defined and not old_host is defined and old_install_dir != install_dir.dir and __old_install_dir.stat.exists
+    - name: migrate | Migrate data from old location to default location
+      become: true
+      ansible.posix.synchronize:
+        src: "{{ __migrate_dir }}/docker-compose.yml"
+        dest: "{{ __compose_install_dir.dir }}/docker-compose.yml"
+      delegate_to: "{{ inventory_hostname }}"
+      register: __migration
+      when: __migrate_dir_result.stat.exists
 
-# - name: migrate | Migrate data from old host location to default location
-#   become: true
-#   ansible.posix.synchronize:
-#     mode: pull
-#     src: ths@{{ old_host }}:/{{ old_install_dir }}
-#     dest: "{{ install_dir.dir }}/"
-#   delegate_to: "{{ inventory_hostname }}"
-#   register: __migration
-#   when: old_install_dir is defined and old_host is defined
+    - name: migrate | Migrate data from old location to default location
+      become: true
+      ansible.posix.synchronize:
+        src: "{{ __migrate_dir }}/"
+        dest: "{{ __compose_project_root_dir.dir }}/"
+      delegate_to: "{{ inventory_hostname }}"
+      register: __migration
+      when: __migrate_dir_result.stat.exists
 
-- name: migrate | Confirm message
-  ansible.builtin.debug:
-    msg: Data migrated from {{ old_install_dir }} to {{ install_dir.dir }}
-  when: __migration.changed and old_install_dir is defined and old_install_dir != install_dir.dir and __old_install_dir.stat.exists
-  changed_when: __migration.changed
+    - name: migrate | Confirm message
+      ansible.builtin.debug:
+        msg: Data migrated from {{ __migrate_dir }} to {{ __compose_install_dir.dir }}
+      when: __migration.changed and __migrate_dir_result.stat.exists
+      changed_when: __migration.changed

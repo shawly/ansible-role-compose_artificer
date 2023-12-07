@@ -10,14 +10,14 @@
     that:
       - compose_artificer_role_prefix is defined
       - compose_artificer_role_prefix != ''
-      - compose_artificer_role_prefix != role_name 
+      - compose_artificer_role_prefix != role_name
       - compose_artificer_compose_project_name is defined
       - compose_artificer_compose_project_name != ''
-      - compose_artificer_compose_project_name != role_name 
-    fail_msg: 
+      - compose_artificer_compose_project_name != role_name
+    fail_msg:
       - "compose_artificer_role_prefix must be set and must not be set to {{ role_name }}"
       - "compose_artificer_compose_project_name must be set and must not be set to {{ role_name }}"
-    success_msg: 
+    success_msg:
       - "compose_artificer_role_prefix is set to {{ compose_artificer_role_prefix }}"
       - "compose_artificer_compose_project_name is set to {{ compose_artificer_compose_project_name }}"
 
@@ -57,7 +57,7 @@
 - name: set_facts | Fetch OS dependent variables
   ansible.builtin.include_vars:
     file: "{{ item }}"
-    name: os_vars
+    name: __os_vars
   # noqa loop-var-prefix[missing]
   with_first_found:
     - files:
@@ -77,42 +77,74 @@
     # noqa var-naming[no-jinja]
     "{{ item.key }}": "{{ item.value }}"
   # noqa loop-var-prefix[missing]
-  with_dict: "{{ os_vars | default({}) }}"
+  with_dict: "{{ __os_vars | default({}) }}"
 
-- name: set_facts | Set variables for compose project
+- name: set_facts | Set default variables for role
   ansible.builtin.set_fact:
-    project_name: "{{ lookup('ansible.builtin.vars', __role_prefix + '_compose_project_name') }}"
-    data_dir: "{{ lookup('ansible.builtin.vars', __role_prefix + '_project_data_dir', default=__compose_artificer_default_data_dir) }}"
-    install_dir: "{{ lookup('ansible.builtin.vars', __role_prefix + '_project_install_dir', default=__compose_artificer_default_install_dir) }}"
-    old_install_dir: "{{ lookup('ansible.builtin.vars', __role_prefix + '_old_install_dir', default=omit) }}"
-    old_host: "{{ lookup('ansible.builtin.vars', __role_prefix + '_old_host', default=omit) }}"
-    docker_compose_files: "{{ lookup('ansible.builtin.vars', __role_prefix + '_docker_compose_files', default=omit) }}"
-    zfs_skip_snapshot: "{{ lookup('ansible.builtin.vars', __role_prefix + '_zfs_skip_snapshot', default=false) }}"
-    healthcheck_timer: "{{ lookup('ansible.builtin.vars', __role_prefix + '_healthcheck_timer', default='disabled') }}"
-    traefik_domain: "{{ lookup('ansible.builtin.vars', __role_prefix + '_traefik_domain', default=omit) }}"
-    traefik_subdomain: "{{ lookup('ansible.builtin.vars', __role_prefix + '_traefik_subdomain', default=omit) }}"
-    traefik_port: "{{ lookup('ansible.builtin.vars', __role_prefix + '_traefik_port', default=omit) }}"
-    docker_compose_overrides: "{{ lookup('ansible.builtin.vars', __role_prefix + '_compose_overrides') }}"
-    maintenance: "{{ lookup('ansible.builtin.vars', __role_prefix + '_maintenance', default=false) }}"
+    # noqa var-naming[no-jinja]
+    "{{ __role_prefix + __var.key }}": "{{ __var.value }}"
+  when: not lookup('varnames', '^' + __role_prefix + __var.key + '$')
+  loop_control:
+    loop_var: __var
+    label: "{{ __role_prefix + __var.key }}"
+  loop: "{{ __variables | dict2items }}"
+  vars:
+    __variables:
+      _compose_project_root_dir: "{{ __compose_artificer_default_compose_project_root_dir }}"
+      _compose_install_dir: "{{ __compose_artificer_default_compose_install_dir }}"
+      _compose_overrides: {}
+      _zfs_snapshot: true
+      _systemd_healthcheck_timer: "disabled"
+      _traefik_domain: "{{ traefik_domain }}"
+      _traefik_subdomain: "{{ __compose_project_name | replace('_', '-') }}"
+      _traefik_port: "80"
+      _maintenance: false
 
-- name: set_facts | Set UnRAID specific variables for composeman
-  ansible.builtin.set_fact:
-    __unraid_service:
-      labels:
-        net.unraid.docker.managed: composeman
-        net.unraid.docker.icon: "{{ lookup('ansible.builtin.vars', __role_prefix + '_unraid_icon', default=__compose_artificer_unraid_icon) }}"
-        net.unraid.docker.webui: "{{ lookup('ansible.builtin.vars', __role_prefix + '_unraid_webui', default=__compose_artificer_unraid_webui) }}"
-        net.unraid.docker.shell: "{{ lookup('ansible.builtin.vars', __role_prefix + '_unraid_shell', default=__compose_artificer_unraid_shell) }}"
-    unraid_description: "{{ lookup('ansible.builtin.vars', __role_prefix + '_unraid_description') | mandatory }}"
+- name: set_facts | Unraid block
   when: ansible_distribution == 'Unraid'
+  block:
+    - name: set_facts | Set UnRAID specific variables for composeman
+      ansible.builtin.set_fact:
+        # noqa var-naming[no-jinja]
+        "{{ __role_prefix + __var.key }}": "{{ __var.value }}"
+      when: not lookup('varnames', '^' + __role_prefix + __var.key + '$')
+      loop_control:
+        loop_var: __var
+        label: "{{ __role_prefix + __var.key }}"
+      loop: "{{ __variables | dict2items }}"
+      vars:
+        __variables:
+          _unraid_description: "{{ __compose_artificer_unraid_description }}"
+          _unraid_icon: "{{ __compose_artificer_unraid_icon }}"
+          _unraid_shell: "{{ __compose_artificer_unraid_shell }}"
+
+    - name: set_facts | Create UnRAID service definition with labels
+      ansible.builtin.set_fact:
+        # noqa var-naming[no-jinja]
+        "{{ __role_prefix }}_unraid_service":
+          labels:
+            net.unraid.docker.managed: composeman
+            net.unraid.docker.icon: "{{ lookup('vars', __role_prefix + '_unraid_icon') }}"
+            # TODO: determine webui url through traefik labels
+            net.unraid.docker.webui: "{{ lookup('vars', __role_prefix + '_unraid_webui', default=omit) }}"
+            net.unraid.docker.shell: "{{ lookup('vars', __role_prefix + '_unraid_shell') }}"
 
 - name: set_facts | Set variables for project directories
   ansible.builtin.set_fact:
-    project_dirs: >-
+    # noqa var-naming[no-jinja]
+    "{{ __role_prefix + '_compose_project_dirs' }}": >-
       {{
         __compose_artificer_default_compose_project_dirs |
-        ansible.builtin.combine(lookup('ansible.builtin.vars', __role_prefix + '_default_compose_project_dirs'),
-        lookup('ansible.builtin.vars', __role_prefix + '_compose_project_dirs'))
+        ansible.builtin.combine(lookup('vars', __role_prefix + '_default_compose_project_dirs'),
+        lookup('vars', __role_prefix + '_compose_project_dirs'))
+      }}
+  vars:
+    __compose_artificer_default_compose_project_dirs: >-
+      {{
+        {
+          __role_prefix + '_compose_install_dir': lookup('vars', __role_prefix + '_compose_install_dir'),
+          __role_prefix + '_compose_project_root_dir': lookup('vars', __role_prefix + '_compose_project_root_dir')
+        }
       }}
 
 - name: set_facts | Set variables for additional project dirs
@@ -121,56 +153,61 @@
     "{{ item.key }}": "{{ item.value }}"
   when: not lookup('varnames', '^' + item.key + '$')
   # noqa loop-var-prefix[missing]
-  with_dict: "{{ project_dirs | default({}) }}"
+  with_dict: "{{ lookup('vars', __role_prefix + '_compose_project_dirs') | default({}) }}"
 
 - name: set_facts | Load docker-compose.yml
   ansible.builtin.include_vars:
     file: docker-compose.yml
-    name: docker_compose_vars
+    name: __docker_compose_vars
 
 - name: set_facts | Build the list of updates to make
   ansible.builtin.set_fact:
-    docker_compose_updates: "{{ (docker_compose_updates | default([{'path': 'docker_compose_vars', 'value': docker_compose_vars}])) + entries }}"
+    __docker_compose_updates: "{{ (__docker_compose_updates | default([{'path': '__docker_compose_vars', 'value': __docker_compose_vars}])) + entries }}"
   vars:
     entries:
-      - path: docker_compose_vars.services.{{ __service }}
+      - path: __docker_compose_vars.services.{{ __service }}
         value: >-
           {{
-            __compose_artificer_default_service | combine((__unraid_service | default({})), docker_compose_vars.services[__service], recursive=true)
+            __compose_artificer_default_service | combine((__unraid_service | default({})), __docker_compose_vars.services[__service], recursive=true)
           }}
-  loop: "{{ docker_compose_vars.services.keys() | list }}"
+  loop: "{{ __docker_compose_vars.services.keys() | list }}"
   loop_control:
     loop_var: __service
 
-- name: set_facts | Update docker_compose_vars
+- name: set_facts | Update __docker_compose_vars
   ansible.utils.update_fact:
-    updates: "{{ docker_compose_updates }}"
+    updates: "{{ __docker_compose_updates }}"
   register: __updated
   changed_when: false
 
 - name: set_facts | Merge overrides
   ansible.builtin.set_fact:
-    docker_compose_merged: "{{ __updated.docker_compose_vars | combine(docker_compose_overrides, recursive=true, list_merge='append_rp') }}"
-
-- name: set_facts | Update variables for project directories
-  ansible.builtin.set_fact:
-    project_dirs: >-
-      {{
-        __compose_artificer_default_compose_project_dirs |
-        ansible.builtin.combine(lookup('ansible.builtin.vars', __role_prefix + '_default_compose_project_dirs'),
-        lookup('ansible.builtin.vars', __role_prefix + '_compose_project_dirs'))
-      }}
-
-- name: set_facts | Update variables for additional project dirs
-  ansible.builtin.set_fact:
     # noqa var-naming[no-jinja]
-    "{{ item.key }}": "{{ item.value }}"
-  when: not lookup('varnames', '^' + item.key + '$')
-  # noqa loop-var-prefix[missing]
-  with_dict: "{{ project_dirs | default({}) }}"
+    "{{ __role_prefix + '_compose_content' }}": "{{ __updated.__docker_compose_vars | combine(__compose_overrides, recursive=true, list_merge='append_rp') }}"
+  vars:
+    __compose_overrides: "{{ lookup('vars', __role_prefix + '_compose_overrides') | default({}) }}"
 
 - name: set_facts | Pretty print docker-compose.yml
   ansible.builtin.debug:
     msg: "{{ msg.split('\n') }}"
+    verbosity: 1
   vars:
-    msg: "{{ docker_compose_merged | to_nice_yaml(indent=2) }}"
+    msg: "{{ lookup('vars', __role_prefix + '_compose_content') | to_nice_yaml(indent=2) }}"
+
+- name: set_facts | Reset all vars
+  ansible.builtin.set_fact:
+    __all_vars: {}
+  no_log: true
+
+- name: set_facts | Gather all vars
+  ansible.builtin.set_fact:
+    __all_vars: "{{ (__all_vars | default({})) | combine({__var: lookup('vars', __var)}) }}"
+  loop: "{{ query('varnames', '^' + __role_prefix + '_.+$') }}"
+  loop_control:
+    loop_var: __var
+  no_log: true
+
+- name: set_facts | Pretty print vars
+  ansible.builtin.debug:
+    var: __all_vars
+    verbosity: 2

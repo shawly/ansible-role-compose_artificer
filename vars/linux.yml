@@ -1,6 +1,6 @@
 ---
-__compose_artificer_default_install_dir:
+__compose_artificer_default_compose_install_dir:
   dir: /srv/{{ __compose_project_name | mandatory }}
 
-__compose_artificer_default_data_dir:
+__compose_artificer_default_compose_project_root_dir:
   dir: /srv/{{ __compose_project_name | mandatory }}

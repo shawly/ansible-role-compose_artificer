@@ -20,5 +20,3 @@ __compose_artificer_default_dir_owner: root
 __compose_artificer_default_dir_group: root
 __compose_artificer_default_dir_mode: "0755"
 __compose_artificer_default_dir_recurse: false
-
-__compose_artificer_default_compose_project_dirs: "{{ ({'install_dir': install_dir, 'data_dir': data_dir} if (install_dir.dir != data_dir.dir) else {'install_dir': install_dir}) }}"

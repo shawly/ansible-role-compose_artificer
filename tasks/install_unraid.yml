@@ -1,58 +1,57 @@
 ---
-- name: install_unraid | Fix libffi.so.7 error for Python
-  ansible.builtin.copy:
-    src: unraid/root/
-    dest: /
-    owner: root
-    group: root
-    mode: "0755"
+- name: install_unraid | Block
+  vars:
+    __compose_install_dir: "{{ lookup('vars', __role_prefix + '_compose_install_dir') }}"
+    __compose_project_root_dir: "{{ lookup('vars', __role_prefix + '_compose_project_root_dir') }}"
+    __unraid_icon: "{{ lookup('vars', __role_prefix + '_unraid_icon') }}"
+    __unraid_webui: "{{ lookup('vars', __role_prefix + '_unraid_webui', default=omit) }}"
+    __unraid_shell: "{{ lookup('vars', __role_prefix + '_unraid_shell') }}"
+  block:
+    - name: install_unraid | Fix libffi.so.7 error for Python
+      ansible.builtin.copy:
+        src: unraid/root/
+        dest: /
+        owner: root
+        group: root
+        mode: "0755"
 
-- name: install_unraid | Install docker python modules for UnRAID hosts
-  ansible.builtin.pip:
-    name:
-      - docker
-      - docker-compose
+    - name: install_unraid | Install docker python modules for UnRAID hosts
+      ansible.builtin.pip:
+        name:
+          - docker
+          - docker-compose
 
-- name: install_unraid | Upload name file for UnRAID hosts
-  ansible.builtin.template:
-    src: unraid/name.j2
-    dest: "{{ install_dir.dir }}/name"
-    owner: root
-    group: root
-    mode: "0600"
+    - name: install_unraid | Upload name file for UnRAID hosts
+      ansible.builtin.template:
+        src: unraid/name.j2
+        dest: "{{ __compose_install_dir.dir }}/name"
+        owner: root
+        group: root
+        mode: "0600"
 
-- name: install_unraid | Upload description file for UnRAID hosts
-  ansible.builtin.template:
-    src: unraid/description.j2
-    dest: "{{ install_dir.dir }}/description"
-    owner: root
-    group: root
-    mode: "0600"
+    - name: install_unraid | Upload description file for UnRAID hosts
+      ansible.builtin.template:
+        src: unraid/description.j2
+        dest: "{{ __compose_install_dir.dir }}/description"
+        owner: root
+        group: root
+        mode: "0600"
 
-- name: install_unraid | Upload docker-compose.override file for UnRAID hosts
-  ansible.builtin.template:
-    src: unraid/docker-compose.override.yml.j2
-    dest: "{{ install_dir.dir }}/docker-compose.override.yml"
-    owner: root
-    group: root
-    mode: "0600"
-  register: _docker_compose_override
+    - name: install_unraid | Create icon image folder for UnRAID hosts
+      ansible.builtin.file:
+        dest: /mnt/user/system/plugins/dynamix.docker.manager/images/
+        state: directory
+        owner: root
+        group: root
+        mode: "{{ __compose_install_dir.mode }}"
 
-- name: install_unraid | Create icon image folder for UnRAID hosts
-  ansible.builtin.file:
-    dest: /mnt/user/system/plugins/dynamix.docker.manager/images/
-    state: directory
-    owner: root
-    group: root
-    mode: "{{ install_dir.mode }}"
-
-- name: install_unraid | Upload icon for UnRAID hosts
-  ansible.builtin.copy:
-    src: "{{ item }}"
-    dest: /mnt/user/system/plugins/dynamix.docker.manager/images/{{ project_name }}-icon.png
-    owner: root
-    group: root
-    mode: "0644"
-  # noqa loop-var-prefix[missing]
-  with_fileglob:
-    - unraid/icons/containers/{{ project_name }}.png
+    - name: install_unraid | Upload icon for UnRAID hosts
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /mnt/user/system/plugins/dynamix.docker.manager/images/{{ __role_prefix }}-icon.png
+        owner: root
+        group: root
+        mode: "0644"
+      # noqa loop-var-prefix[missing]
+      with_fileglob:
+        - unraid/icons/containers/{{ __role_prefix }}.png

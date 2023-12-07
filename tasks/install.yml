@@ -1,82 +1,103 @@
 ---
-- name: install | Create dataset for {{ project_name }}
-  become: true
-  community.general.zfs:
-    name: "{{ zfs_ubuntu_root_pool }}{{ install_dir.dir }}"
-    state: present
-  register: zfs_dataset
-  when: "'zfs' in group_names"
-
-- name: install | Create snapshot for {{ install_dir.dir }}
-  become: true
-  community.general.zfs:
-    name: "{{ zfs_ubuntu_root_pool }}{{ install_dir.dir }}@ansible-{{ ansible_date_time.iso8601_basic_short }}"
-    state: present
-  when: "'zfs' in group_names and not zfs_skip_snapshot and not maintenance"
-
-- name: install | Create directories for {{ project_name }}
-  become: true
-  ansible.builtin.file:
-    path: "{{ __folder.value.dir | mandatory }}"
-    state: directory
-    owner: "{{ __folder.value.owner | default('root') }}"
-    group: "{{ __folder.value.group | default('root') }}"
-    mode: "{{ __folder.value.mode | default('0755') }}"
-    recurse: "{{ __folder.value.recurse | default('false') }}"
-  loop: "{{ project_dirs | dict2items }}"
-  loop_control:
-    label: "{{ __folder.value.dir | mandatory }}"
-    loop_var: __folder
-
-- name: install | Upload docker-compose files for {{ project_name }}
-  become: true
-  ansible.builtin.template:
-    src: docker-compose.yml.j2
-    dest: "{{ install_dir.dir }}/docker-compose.yml"
-    owner: root
-    group: root
-    mode: "0600"
-  register: _docker_compose
-
-- name: install | Install UnRAID files for {{ project_name }}
-  become: true
-  ansible.builtin.import_tasks: install_unraid.yml
-  when: ansible_distribution == 'Unraid'
-
-- name: install | Install docker-healthcheck timer and service files
-  when: healthcheck_timer is defined and healthcheck_timer != 'disabled'
+- name: install | Block
+  vars:
+    __compose_install_dir: "{{ lookup('vars', __role_prefix + '_compose_install_dir') }}"
+    __compose_project_root_dir: "{{ lookup('vars', __role_prefix + '_compose_project_root_dir') }}"
+    __docker_compose_files: "{{ lookup('vars', __role_prefix + '_docker_compose_files') | default(omit) }}"
+    __zfs_skip_snapshot: "{{ lookup('vars', __role_prefix + '_zfs_skip_snapshot', default=false) }}"
+    __maintenance: "{{ lookup('vars', __role_prefix + '_maintenance', default=false) }}"
+    __compose_project_dirs: "{{ lookup('vars', __role_prefix + '_compose_project_dirs') }}"
+    __systemd_healthcheck_timer: "{{ lookup('vars', __role_prefix + '_systemd_healthcheck_timer') }}"
+    __compose_content: "{{ lookup('vars', __role_prefix + '_compose_content') }}"
   block:
-    - name: install | Install timer unit to /lib/systemd/system/
+    - name: install | Create dataset for {{ __compose_project_name }}
       become: true
-      ansible.builtin.template:
-        src: docker-healthcheck.timer.j2
-        dest: /lib/systemd/system/docker-healthcheck-{{ __time }}@.timer
-        owner: root
-        group: root
-        mode: "0644"
-      loop: [hourly, daily, weekly]
+      community.general.zfs:
+        name: "{{ zfs_host_root_pool }}{{ __dataset }}"
+        state: present
+      register: zfs_dataset
+      when: "'zfs' in group_names"
+      loop: "{{ __datasets }}"
       loop_control:
-        loop_var: __time
-      register: __healthcheck_timer
+        loop_var: __dataset
+      vars:
+        __datasets: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
 
-    - name: install | Install service unit to /lib/systemd/system/
+    - name: install | Create snapshot for datasets
+      become: true
+      community.general.zfs:
+        name: "{{ zfs_host_root_pool }}{{ __dataset }}@ansible-{{ ansible_date_time.iso8601_basic_short }}"
+        state: present
+      when: "'zfs' in group_names and not __zfs_skip_snapshot and not __maintenance"
+      loop: "{{ __datasets }}"
+      loop_control:
+        loop_var: __dataset
+      vars:
+        __datasets: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
+
+    - name: install | Create directories for {{ __compose_project_name }}
+      become: true
+      ansible.builtin.file:
+        path: "{{ __folder.value.dir | mandatory }}"
+        state: directory
+        owner: "{{ __folder.value.owner | default('root') }}"
+        group: "{{ __folder.value.group | default('root') }}"
+        mode: "{{ __folder.value.mode | default('0755') }}"
+        recurse: "{{ __folder.value.recurse | default('false') }}"
+      loop: "{{ __compose_project_dirs | dict2items }}"
+      loop_control:
+        label: "{{ __folder.value.dir | mandatory }}"
+        loop_var: __folder
+
+    - name: install | Upload docker-compose files for {{ __compose_project_name }}
       become: true
       ansible.builtin.template:
-        src: docker-healthcheck.service.j2
-        dest: /lib/systemd/system/docker-healthcheck@.service
+        src: docker-compose.yml.j2
+        dest: "{{ __compose_install_dir.dir }}/docker-compose.yml"
         owner: root
         group: root
-        mode: "0644"
-      register: __healthcheck_service
+        mode: "0600"
+      register: _docker_compose
 
-    - name: install | Reload systemd
+    - name: install | Install UnRAID files for {{ __compose_project_name }}
       become: true
-      ansible.builtin.systemd:
-        daemon_reload: true
-      when: __healthcheck_timer.changed or __healthcheck_service.changed
+      ansible.builtin.import_tasks: install_unraid.yml
+      when: ansible_distribution == 'Unraid'
 
-    - name: install | Enable healthcheck timer for {{ install_dir.dir }}
-      become: true
-      ansible.builtin.systemd:
-        name: docker-healthcheck-{{ healthcheck_timer }}@{{ install_dir.dir | replace('/', '-') }}.timer
-        enabled: true
+    - name: install | Install docker-healthcheck timer and service files
+      when: __systemd_healthcheck_timer is defined and __systemd_healthcheck_timer != 'disabled' and ansible_distribution != 'Unraid'
+      block:
+        - name: install | Install timer unit to /lib/systemd/system/
+          become: true
+          ansible.builtin.template:
+            src: docker-healthcheck.timer.j2
+            dest: /lib/systemd/system/docker-healthcheck-{{ __time }}@.timer
+            owner: root
+            group: root
+            mode: "0644"
+          loop: [hourly, daily, weekly]
+          loop_control:
+            loop_var: __time
+          register: __healthcheck_timer
+
+        - name: install | Install service unit to /lib/systemd/system/
+          become: true
+          ansible.builtin.template:
+            src: docker-healthcheck.service.j2
+            dest: /lib/systemd/system/docker-healthcheck@.service
+            owner: root
+            group: root
+            mode: "0644"
+          register: __healthcheck_service
+
+        - name: install | Reload systemd
+          become: true
+          ansible.builtin.systemd:
+            daemon_reload: true
+          when: __healthcheck_timer.changed or __healthcheck_service.changed
+
+        - name: install | Enable healthcheck timer for {{ __compose_install_dir.dir }}
+          become: true
+          ansible.builtin.systemd:
+            name: docker-healthcheck-{{ __systemd_healthcheck_timer }}@{{ __compose_install_dir.dir | replace('/', '-') }}.timer
+            enabled: true
