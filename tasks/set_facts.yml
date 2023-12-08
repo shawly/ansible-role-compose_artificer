@@ -26,34 +26,6 @@
     __role_prefix: "{{ compose_artificer_role_prefix }}"
     __compose_project_name: "{{ compose_artificer_compose_project_name }}"
 
-- name: set_facts | Slurp /etc/unraid-version
-  ansible.builtin.slurp:
-    src: /etc/unraid-version
-  register: __unraid_version
-  when: ansible_facts.os_family == 'Slackware' and ('unraid' in ansible_facts.kernel | lower) | bool
-
-- name: set_facts | Override os facts for UnRaid
-  ansible.utils.update_fact:
-    updates:
-      - path: ansible_facts.distribution
-        value: Unraid
-      - path: ansible_facts.distribution_version
-        value: "{{ __unraid_version.content | b64decode | regex_replace('version=\"([0-9\\.]+)\"', '\\1') | trim }}"
-      - path: ansible_facts.distribution_major_version
-        value: "{{ __unraid_version.content | b64decode | regex_replace('version=\"([0-9]+)\\..*\"', '\\1') | trim }}"
-      - path: ansible_facts.distribution_file_path
-        value: /etc/unraid-version
-      - path: ansible_facts.ansible_distribution
-        value: Unraid
-      - path: ansible_facts.ansible_distribution_version
-        value: "{{ __unraid_version.content | b64decode | regex_replace('version=\"([0-9\\.]+)\"', '\\1') | trim }}"
-      - path: ansible_facts.ansible_distribution_major_version
-        value: "{{ __unraid_version.content | b64decode | regex_replace('version=\"([0-9]+)\\..*\"', '\\1') | trim }}"
-      - path: ansible_facts.ansible_distribution_file_path
-        value: /etc/unraid-version
-  changed_when: false
-  when: ansible_facts.os_family == 'Slackware' and ('unraid' in ansible_facts.kernel | lower) | bool
-
 - name: set_facts | Fetch OS dependent variables
   ansible.builtin.include_vars:
     file: "{{ item }}"
