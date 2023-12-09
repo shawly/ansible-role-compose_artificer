@@ -66,7 +66,6 @@
       _compose_install_dir: "{{ __compose_artificer_default_compose_install_dir }}"
       _compose_overrides: {}
       _zfs_snapshot: true
-      _systemd_healthcheck_timer: "disabled"
       _traefik_domain: "{{ traefik_domain }}"
       _traefik_subdomain: "{{ __compose_project_name | replace('_', '-') }}"
       _traefik_port: "80"

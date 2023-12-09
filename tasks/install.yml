@@ -7,7 +7,6 @@
     __zfs_skip_snapshot: "{{ lookup('vars', __role_prefix + '_zfs_skip_snapshot', default=false) }}"
     __maintenance: "{{ lookup('vars', __role_prefix + '_maintenance', default=false) }}"
     __compose_project_dirs: "{{ lookup('vars', __role_prefix + '_compose_project_dirs') }}"
-    __systemd_healthcheck_timer: "{{ lookup('vars', __role_prefix + '_systemd_healthcheck_timer') }}"
     __compose_content: "{{ lookup('vars', __role_prefix + '_compose_content') }}"
   block:
     - name: install | Create dataset for {{ __compose_project_name }}
@@ -63,41 +62,3 @@
       become: true
       ansible.builtin.import_tasks: install_unraid.yml
       when: ansible_distribution == 'Unraid'
-
-    - name: install | Install docker-healthcheck timer and service files
-      when: __systemd_healthcheck_timer is defined and __systemd_healthcheck_timer != 'disabled' and ansible_distribution != 'Unraid'
-      block:
-        - name: install | Install timer unit to /lib/systemd/system/
-          become: true
-          ansible.builtin.template:
-            src: docker-healthcheck.timer.j2
-            dest: /lib/systemd/system/docker-healthcheck-{{ __time }}@.timer
-            owner: root
-            group: root
-            mode: "0644"
-          loop: [hourly, daily, weekly]
-          loop_control:
-            loop_var: __time
-          register: __healthcheck_timer
-
-        - name: install | Install service unit to /lib/systemd/system/
-          become: true
-          ansible.builtin.template:
-            src: docker-healthcheck.service.j2
-            dest: /lib/systemd/system/docker-healthcheck@.service
-            owner: root
-            group: root
-            mode: "0644"
-          register: __healthcheck_service
-
-        - name: install | Reload systemd
-          become: true
-          ansible.builtin.systemd:
-            daemon_reload: true
-          when: __healthcheck_timer.changed or __healthcheck_service.changed
-
-        - name: install | Enable healthcheck timer for {{ __compose_install_dir.dir }}
-          become: true
-          ansible.builtin.systemd:
-            name: docker-healthcheck-{{ __systemd_healthcheck_timer }}@{{ __compose_install_dir.dir | replace('/', '-') }}.timer
-            enabled: true

@@ -7,7 +7,6 @@
     __zfs_skip_snapshot: "{{ lookup('vars', __role_prefix + '_zfs_skip_snapshot', default=false) }}"
     __maintenance: "{{ lookup('vars', __role_prefix + '_maintenance', default=false) }}"
     __compose_project_dirs: "{{ lookup('vars', __role_prefix + '_compose_project_dirs') }}"
-    __systemd_healthcheck_timer: "{{ lookup('vars', __role_prefix + '_systemd_healthcheck_timer') }}"
   block:
     - name: run | Execute docker compose config for validation
       become: true
