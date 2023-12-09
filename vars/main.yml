@@ -9,7 +9,6 @@ __compose_artificer_default_service:
   environment:
     TZ: "{{ compose_artificer_timezone }}"
   labels:
-    autoheal: false
     com.centurylinklabs.watchtower.enable: true
     de.shawly.ansible.managed: true
   volumes:
