@@ -11,6 +11,7 @@ __compose_artificer_default_service:
   labels:
     com.centurylinklabs.watchtower.enable: true
     de.shawly.ansible.managed: true
+    de.shawly.healer.enabled: true
   volumes:
     - /etc/localtime:/etc/localtime:ro
 
