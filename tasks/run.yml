@@ -22,6 +22,7 @@
       become: true
       community.docker.docker_compose:
         project_src: "{{ __compose_install_dir.dir }}/"
+        pull: true
         state: present
         remove_orphans: true
         files: "{{ __docker_compose_files | default(omit) }}"
