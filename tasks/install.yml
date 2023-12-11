@@ -40,10 +40,10 @@
       ansible.builtin.file:
         path: "{{ __folder.value.dir | mandatory }}"
         state: directory
-        owner: "{{ __folder.value.owner | default('root') }}"
-        group: "{{ __folder.value.group | default('root') }}"
-        mode: "{{ __folder.value.mode | default('0755') }}"
-        recurse: "{{ __folder.value.recurse | default('false') }}"
+        owner: "{{ __folder.value.owner | default(compose_artificer_default_dir_owner) }}"
+        group: "{{ __folder.value.group | default(compose_artificer_default_dir_group) }}"
+        mode: "{{ __folder.value.mode | default(compose_artificer_default_dir_mode) }}"
+        recurse: "{{ __folder.value.recurse | default(compose_artificer_default_dir_recurse) }}"
       loop: "{{ __compose_project_dirs | dict2items }}"
       loop_control:
         label: "{{ __folder.value.dir | mandatory }}"

@@ -1,4 +1,35 @@
 ---
 # defaults file for compose_artificer
 
+# default timezone
 compose_artificer_timezone: Europe/Berlin
+
+# default service template (will be applied as base to all services in a compose project)
+# to override a property for an individual service, use `role_name_compose_overrides` to override any of these properties e.g.:
+#   role_name_compose_overrides:
+#      services:
+#        app:
+#          environment:
+#            # drop TZ environment variable via omit
+#            TZ: {{ omit }}
+# to override the whole template use `role_name_default_service_template`
+compose_artificer_default_service_template:
+  restart: always
+  environment:
+    TZ: "{{ compose_artificer_timezone }}"
+  labels:
+    com.centurylinklabs.watchtower.enable: true
+    de.shawly.ansible.managed: true
+    de.shawly.healer.enabled: true
+  volumes:
+    - /etc/localtime:/etc/localtime:ro
+
+# default zfs settings
+compose_artificer_default_zfs_root_pool: zroot
+compose_artificer_default_zfs_root_dataset: "{{ compose_artificer_default_zfs_root_pool }}/ROOT/ubuntu"
+
+# default dir settings
+compose_artificer_default_dir_owner: root
+compose_artificer_default_dir_group: root
+compose_artificer_default_dir_mode: "0755"
+compose_artificer_default_dir_recurse: false
