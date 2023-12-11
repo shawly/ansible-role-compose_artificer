@@ -26,10 +26,10 @@
     - name: migrate | Create datasets for {{ __compose_project_name }}
       become: true
       community.general.zfs:
-        name: "{{ zfs_host_root_pool }}{{ __dataset }}"
+        name: "{{ __zfs_root_dataset }}{{ __dataset }}"
         state: present
       register: zfs_dataset
-      when: "'zfs' in group_names and __migrate_dir_result.stat.exists"
+      when: "__migrate_dir_result.stat.exists and ansible_zfs_datasets is defined and ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length"
       loop: "{{ __datasets }}"
       loop_control:
         loop_var: __dataset

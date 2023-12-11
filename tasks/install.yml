@@ -5,6 +5,7 @@
     __compose_project_root_dir: "{{ lookup('vars', __role_prefix + '_compose_project_root_dir') }}"
     __docker_compose_files: "{{ lookup('vars', __role_prefix + '_docker_compose_files') | default(omit) }}"
     __zfs_skip_snapshot: "{{ lookup('vars', __role_prefix + '_zfs_skip_snapshot', default=false) }}"
+    __zfs_root_dataset: "{{ lookup('vars', __role_prefix + '_zfs_root_dataset') }}"
     __maintenance: "{{ lookup('vars', __role_prefix + '_maintenance', default=false) }}"
     __compose_project_dirs: "{{ lookup('vars', __role_prefix + '_compose_project_dirs') }}"
     __compose_content: "{{ lookup('vars', __role_prefix + '_compose_content') }}"
@@ -12,10 +13,10 @@
     - name: install | Create dataset for {{ __compose_project_name }}
       become: true
       community.general.zfs:
-        name: "{{ zfs_host_root_pool }}{{ __dataset }}"
+        name: "{{ __zfs_root_dataset }}{{ __dataset }}"
         state: present
       register: zfs_dataset
-      when: "'zfs' in group_names"
+      when: ansible_zfs_datasets is defined and ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length
       loop: "{{ __datasets }}"
       loop_control:
         loop_var: __dataset
@@ -25,9 +26,9 @@
     - name: install | Create snapshot for datasets
       become: true
       community.general.zfs:
-        name: "{{ zfs_host_root_pool }}{{ __dataset }}@ansible-{{ ansible_date_time.iso8601_basic_short }}"
+        name: "{{ __zfs_root_dataset }}{{ __dataset }}@ansible-{{ ansible_date_time.iso8601_basic_short }}"
         state: present
-      when: "'zfs' in group_names and not __zfs_skip_snapshot and not __maintenance"
+      when: "not __zfs_skip_snapshot and not __maintenance and ansible_zfs_datasets is defined and ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length"
       loop: "{{ __datasets }}"
       loop_control:
         loop_var: __dataset

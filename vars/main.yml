@@ -15,6 +15,9 @@ __compose_artificer_default_service:
   volumes:
     - /etc/localtime:/etc/localtime:ro
 
+__compose_artificer_default_zfs_root_pool: zroot
+__compose_artificer_default_zfs_root_dataset: "{{ __compose_artificer_default_zfs_root_pool }}/ROOT/ubuntu"
+
 # default dir settings
 __compose_artificer_default_dir_owner: root
 __compose_artificer_default_dir_group: root
