@@ -176,7 +176,7 @@
 - name: set_facts | Gather all vars
   ansible.builtin.set_fact:
     __all_vars: "{{ (__all_vars | default({})) | combine({__var: lookup('vars', __var)}) }}"
-  loop: "{{ query('varnames', '^' + __role_prefix + '_.+$') }}"
+  loop: "{{ query('varnames', '^(' + __role_prefix + '|compose_artificer)_.+$') }}"
   loop_control:
     loop_var: __var
   no_log: true

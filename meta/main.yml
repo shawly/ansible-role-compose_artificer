@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: shawly
+  description: Utility role for deploying Docker Compose stacks in a unified way.
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.1"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - focal
+    - name: Debian
+      versions:
+        - bookworm
+        - bullseye
+
+  galaxy_tags:
+    - docker
+    - compose
+    - artificer
+    - utility
+
+dependencies: []
