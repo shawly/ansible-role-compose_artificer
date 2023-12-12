@@ -65,15 +65,15 @@ example `main.yml` would look like this:
 
 The next requirement is a `docker-compose.yml` inside your role's `vars/`
 directory that contains your compose stack. To get all that set up quickly, you
-can use the `shawly.compose_artificer_skeleton` skeleton role.
+can use the [`shawly.compose_artificer_skeleton`](https://github.com/shawly/ansible-role-skeleton-compose_artificer.git) skeleton role.
 
 ### Skeleton
 
 To make creating new roles that use `shawly.compose_artificer` easier, use the
-`shawly.compose_artificer_skeleton` role e.g.:
+[`shawly.compose_artificer_skeleton`](https://github.com/shawly/ansible-role-skeleton-compose_artificer.git) role e.g.:
 
 ```bash
-git clone https://github.com/shawly/ansible-compose_artificer_skeleton.git shawly.compose_artificer_skeleton
+git clone https://github.com/shawly/ansible-role-skeleton-compose_artificer.git shawly.compose_artificer_skeleton
 ansible-galaxy init --role-skeleton shawly.compose_artificer_skeleton "${role_name:?}"
 ```
 
@@ -237,8 +237,12 @@ This is a list of all role variables for `shawly.compose_artificer`:
 - hosts: servers
   roles:
     - { role: shawly.compose_artificer, x: 42 }
-```	
+```
 
 ## License
 
-GPLv3
+GPL-3.0-or-later
+
+## Author Information
+
+Created by [shawly](https://github.com/shawly).
