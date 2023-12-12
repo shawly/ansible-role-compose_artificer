@@ -1,9 +1,11 @@
-# shawly.compose_artificer
+# shawly.compose_artificer (WIP)
 
 The `shawly.compose_artificer` Ansible role can be used as utility for deploying
 Docker Compose stacks in a unified way. The idea is to a have a base role that
 executes all common tasks that are necessary to get a compose project up and
 running, it should do the following:
+
+**NOTE:** This is still a work in progress and it is heavily tailored to my needs currently. Making things more dynamic always means it will make things also more complex, so feature requests will probably not yet be implemented. Also we need tests.
 
 **set_facts.yml**
 
