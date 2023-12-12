@@ -3,36 +3,45 @@
   vars:
     __compose_install_dir: "{{ lookup('vars', __role_prefix + '_compose_install_dir') }}"
     __compose_project_root_dir: "{{ lookup('vars', __role_prefix + '_compose_project_root_dir') }}"
-    __docker_compose_files: "{{ lookup('vars', __role_prefix + '_docker_compose_files') | default(omit) }}"
+    __docker_compose_files: "{{ lookup('vars', __role_prefix + '_docker_compose_files', default=['docker-compose.yml']) }}"
     __zfs_skip_snapshot: "{{ lookup('vars', __role_prefix + '_zfs_skip_snapshot', default=false) }}"
     __maintenance: "{{ lookup('vars', __role_prefix + '_maintenance', default=false) }}"
     __compose_project_dirs: "{{ lookup('vars', __role_prefix + '_compose_project_dirs') }}"
+    __container_name: "{{ lookup('vars', __role_prefix + '_container_name', default=__compose_project_name) }}"
+  environment:
+    COMPOSE_FILE: "{{ __docker_compose_files | join(':') }}"
   block:
     - name: run | Execute docker compose config for validation
       become: true
       ansible.builtin.command:
-        cmd: docker compose -f {{ __docker_compose_files | default(['docker-compose.yml']) | join(' -f ') }} config
+        cmd: docker compose --progress=plain config
         chdir: "{{ __compose_install_dir.dir }}"
       register: _docker_compose_validation
-      failed_when: _docker_compose_validation.rc != 0
+      changed_when: _docker_compose.changed
+      when: not ansible_check_mode
+
+    - name: run | Pull images
+      become: true
+      ansible.builtin.command:
+        cmd: docker compose --progress=plain pull
+        chdir: "{{ __compose_install_dir.dir }}"
       changed_when: _docker_compose.changed
       when: not ansible_check_mode
 
     - name: run | Ensure services are started
       become: true
-      community.docker.docker_compose:
-        project_src: "{{ __compose_install_dir.dir }}/"
-        pull: true
-        state: present
-        remove_orphans: true
-        files: "{{ __docker_compose_files | default(omit) }}"
+      ansible.builtin.command:
+        cmd: docker compose --progress=plain up -d --remove-orphans
+        chdir: "{{ __compose_install_dir.dir }}"
+      register: _docker_compose_up
+      changed_when: _docker_compose.changed and (" Container {{ __container_name }}  Started" in _docker_compose_up.stderr_lines)
       when: not __maintenance and not ansible_check_mode
 
     - name: run | Shut down services
       become: true
-      community.docker.docker_compose:
-        project_src: "{{ __compose_install_dir.dir }}/"
-        state: absent
-        remove_orphans: true
-        files: "{{ __docker_compose_files | default(omit) }}"
+      ansible.builtin.command:
+        cmd: docker compose --progress=plain stop
+        chdir: "{{ __compose_install_dir.dir }}"
+      register: _docker_compose_stop
+      changed_when: (" Container {{ __container_name }}  Stopped" in _docker_compose_stop.stderr_lines)
       when: __maintenance and not ansible_check_mode

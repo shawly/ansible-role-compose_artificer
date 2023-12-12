@@ -7,6 +7,8 @@
     __docker_compose_files: "{{ lookup('vars', __role_prefix + '_docker_compose_files') | default(omit) }}"
     __do_migrate: __migrate_dir is defined and __migrate_dir != __compose_install_dir.dir and __migrate_dir != __compose_project_root_dir.dir
   when: __do_migrate
+  environment:
+    COMPOSE_FILE: "{{ __docker_compose_files }}"
   block:
     - name: migrate | Check if migrate_dir exists
       become: true
@@ -16,11 +18,9 @@
 
     - name: migrate | Shut down all services
       become: true
-      community.docker.docker_compose:
-        project_src: "{{ __migrate_dir }}/"
-        state: absent
-        remove_orphans: true
-        files: "{{ __docker_compose_files | default(omit) }}"
+      ansible.builtin.command:
+        cmd: docker compose --progress=plain stop
+        chdir: "{{ __migrate_dir }}"
       when: __migrate_dir_result.stat.exists
 
     - name: migrate | Create datasets for {{ __compose_project_name }}

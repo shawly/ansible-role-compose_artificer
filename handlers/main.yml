@@ -3,7 +3,7 @@
 
 - name: Restart services
   become: true
-  community.docker.docker_compose:
-    project_src: "{{ install_dir.dir }}/"
-    restarted: true
+  ansible.builtin.command:
+    cmd: docker compose --progress=plain restart
+    chdir: "{{ install_dir.dir }}"
   when: not _docker_compose.changed
