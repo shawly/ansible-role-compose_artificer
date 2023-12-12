@@ -2,5 +2,5 @@
 - name: Invalid usage error
   ansible.builtin.fail:
     msg:
-      - compose_artificer must be used via import_role!
-      - Use compose_artificer_skeleton to create a role via ansible-galaxy!
+      - shawly.compose_artificer must be used via import_role!
+      - Use shawly.compose_artificer_skeleton to create a role via ansible-galaxy!

@@ -1,5 +1,5 @@
 ---
-# defaults file for compose_artificer
+# defaults file for shawly.compose_artificer
 
 # default timezone
 compose_artificer_timezone: Europe/Berlin

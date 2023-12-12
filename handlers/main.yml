@@ -1,5 +1,5 @@
 ---
-# handlers file for compose_artificer
+# handlers file for shawly.compose_artificer
 
 - name: Restart services
   become: true
