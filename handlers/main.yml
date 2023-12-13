@@ -5,5 +5,6 @@
   become: true
   ansible.builtin.command:
     cmd: docker compose --progress=plain restart
-    chdir: "{{ install_dir.dir }}"
+    chdir: "{{ __compose_install_dir.dir }}"
+  changed_when: true
   when: not _docker_compose.changed

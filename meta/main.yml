@@ -1,5 +1,6 @@
 ---
 galaxy_info:
+  role_name: compose_artificer
   author: shawly
   description: Utility role for deploying Docker Compose stacks in a unified way.
   license: GPL-3.0-or-later
