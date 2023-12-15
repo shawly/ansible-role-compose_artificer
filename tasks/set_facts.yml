@@ -103,31 +103,21 @@
             net.unraid.docker.webui: "{{ lookup('vars', __role_prefix + '_unraid_webui', default=omit) }}"
             net.unraid.docker.shell: "{{ lookup('vars', __role_prefix + '_unraid_shell') }}"
 
-- name: set_facts | Set variables for project directories
-  ansible.builtin.set_fact:
-    # noqa var-naming[no-jinja]
-    "{{ __role_prefix + '_compose_project_dirs' }}": >-
-      {{
-        __compose_artificer_default_compose_project_dirs |
-        ansible.builtin.combine(lookup('vars', __role_prefix + '_default_compose_project_dirs'),
-        lookup('vars', __role_prefix + '_compose_project_dirs'))
-      }}
-  vars:
-    __compose_artificer_default_compose_project_dirs: >-
-      {{
-        {
-          __role_prefix + '_compose_install_dir': lookup('vars', __role_prefix + '_compose_install_dir'),
-          __role_prefix + '_compose_project_root_dir': lookup('vars', __role_prefix + '_compose_project_root_dir')
-        }
-      }}
-
-- name: set_facts | Set variables for additional project dirs
+- name: set_facts | Set variables for project dirs
   ansible.builtin.set_fact:
     # noqa var-naming[no-jinja]
     "{{ item.key }}": "{{ item.value }}"
   when: not lookup('varnames', '^' + item.key + '$')
   # noqa loop-var-prefix[missing]
-  with_dict: "{{ lookup('vars', __role_prefix + '_compose_project_dirs') | default({}) }}"
+  with_dict: "{{ __compose_artificer_compose_project_dirs }}"
+  vars:
+    __compose_artificer_compose_project_dirs: >-
+      {{
+        {
+          __role_prefix + '_compose_install_dir': lookup('vars', __role_prefix + '_compose_install_dir'),
+          __role_prefix + '_compose_project_root_dir': lookup('vars', __role_prefix + '_compose_project_root_dir')
+        } | ansible.builtin.combine(lookup('vars', __role_prefix + '_default_compose_project_dirs'), lookup('vars', __role_prefix + '_compose_project_dirs'))
+      }}
 
 - name: set_facts | Load docker-compose.yml
   ansible.builtin.include_vars:
@@ -160,6 +150,31 @@
     "{{ __role_prefix + '_compose_content' }}": "{{ __updated.__docker_compose_vars | combine(__compose_overrides, recursive=true, list_merge='append_rp') }}"
   vars:
     __compose_overrides: "{{ lookup('vars', __role_prefix + '_compose_overrides') | default({}) }}"
+
+- name: set_facts | Set compose project dirs variable
+  ansible.builtin.set_fact:
+    # noqa var-naming[no-jinja]
+    "{{ __role_prefix + '_compose_project_dirs' }}": >-
+      {{
+        __compose_artificer_default_compose_project_dirs | ansible.builtin.combine(__role_default_compose_project_dirs, __role_compose_project_dirs)
+      }}
+  vars:
+    __compose_artificer_default_compose_project_dirs: >-
+      {{
+        {
+          __role_prefix + '_compose_install_dir': lookup('vars', __role_prefix + '_compose_install_dir'),
+          __role_prefix + '_compose_project_root_dir': lookup('vars', __role_prefix + '_compose_project_root_dir')
+        }
+      }}
+    __role_default_compose_project_dirs: "{{ lookup('vars', __role_prefix + '_default_compose_project_dirs', default={}) }}"
+    __role_compose_project_dirs: "{{ lookup('vars', __role_prefix + '_compose_project_dirs', default={}) }}"
+
+- name: set_facts | Override variables for project dirs
+  ansible.builtin.set_fact:
+    # noqa var-naming[no-jinja]
+    "{{ item.key }}": "{{ item.value }}"
+  # noqa loop-var-prefix[missing]
+  with_dict: "{{ lookup('vars', __role_prefix + '_compose_project_dirs') | default({}) }}"
 
 - name: set_facts | Pretty print docker-compose.yml
   ansible.builtin.debug:
