@@ -64,3 +64,7 @@
         msg: Data migrated from {{ __migrate_dir }} to {{ __compose_install_dir.dir }}
       when: (__migration_data.changed or __migration_compose_file.changed) and __migrate_dir_result.stat.exists
       changed_when: __migration_data.changed or __migration_compose_file.changed
+  rescue:
+    - name: migrate | Failure during migration
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"

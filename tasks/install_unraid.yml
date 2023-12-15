@@ -55,3 +55,7 @@
       # noqa loop-var-prefix[missing]
       with_fileglob:
         - unraid/icons/containers/{{ __role_prefix }}.png
+  rescue:
+    - name: install_unraid | Failure during UnRAID installation
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"

@@ -16,7 +16,7 @@
       ansible.builtin.command:
         cmd: docker compose --progress=plain config
         chdir: "{{ __compose_install_dir.dir }}"
-      changed_when: _docker_compose.changed
+      changed_when: compose_artificer_compose_file.changed
       when: not ansible_check_mode
 
     - name: run | Pull images
@@ -45,3 +45,20 @@
       register: _docker_compose_stop
       changed_when: ("Stopped" in _docker_compose_stop.stderr_lines)
       when: __maintenance and not ansible_check_mode
+
+    - name: run | Check if compose file backup was created
+      become: true
+      ansible.builtin.stat:
+        path: "{{ compose_artificer_compose_file.backup_file | default('/dummy/path') }}"
+      register: compose_artificer_compose_file_backup
+
+    - name: run | Remove compose file backup
+      become: true
+      ansible.builtin.file:
+        path: "{{ compose_artificer_compose_file.backup_file }}"
+        state: absent
+      when: compose_artificer_compose_file_backup.stat.exists
+  rescue:
+    - name: run | Failure startup
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"

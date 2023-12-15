@@ -102,6 +102,10 @@
             # TODO: determine webui url through traefik labels
             net.unraid.docker.webui: "{{ lookup('vars', __role_prefix + '_unraid_webui', default=omit) }}"
             net.unraid.docker.shell: "{{ lookup('vars', __role_prefix + '_unraid_shell') }}"
+  rescue:
+    - name: set_facts | Failure during UnRAID setup
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"
 
 - name: set_facts | Set variables for project dirs
   ansible.builtin.set_fact:

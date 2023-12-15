@@ -44,6 +44,7 @@
         group: "{{ __folder.value.group | default(compose_artificer_default_dir_group) }}"
         mode: "{{ __folder.value.mode | default(compose_artificer_default_dir_mode) }}"
         recurse: "{{ __folder.value.recurse | default(compose_artificer_default_dir_recurse) }}"
+      register: _project_dir_creation
       loop: "{{ __compose_project_dirs | dict2items }}"
       loop_control:
         label: "{{ __folder.value.dir | mandatory }}"
@@ -57,9 +58,43 @@
         owner: root
         group: root
         mode: "0600"
-      register: _docker_compose
+        backup: true
+      register: compose_artificer_compose_file
 
     - name: install | Install UnRAID files for {{ __compose_project_name }}
       become: true
       ansible.builtin.import_tasks: install_unraid.yml
       when: ansible_distribution == 'Unraid'
+  rescue:
+    - name: install | An error occurred on installation
+      ansible.builtin.debug:
+        msg: An error occurred when installing {{ __compose_project_name }} - Task {{ ansible_failed_task.name }} failed
+
+    - name: install | Check if compose file backup was created
+      become: true
+      ansible.builtin.stat:
+        path: "{{ compose_artificer_compose_file.backup_file | default('/dummy/path') }}"
+      register: compose_artificer_compose_file_backup
+      when: compose_artificer_compose_file.failed is defined and compose_artificer_compose_file.failed
+
+    - name: install | Restore compose file backup
+      become: true
+      ansible.builtin.copy:
+        src: "{{ compose_artificer_compose_file.backup_file }}"
+        dest: "{{ __compose_install_dir.dir }}/docker-compose.yml"
+        owner: root
+        group: root
+        mode: "0600"
+        remote_src: true
+      when: compose_artificer_compose_file.failed is defined and compose_artificer_compose_file.failed and compose_artificer_compose_file_backup.stat.exists
+
+    - name: install | Remove compose file backup
+      become: true
+      ansible.builtin.file:
+        path: "{{ compose_artificer_compose_file.backup_file }}"
+        state: absent
+      when: compose_artificer_compose_file.failed is defined and compose_artificer_compose_file.failed and compose_artificer_compose_file_backup.stat.exists
+
+    - name: install | Installation failed
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"
