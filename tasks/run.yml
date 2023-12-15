@@ -16,7 +16,6 @@
       ansible.builtin.command:
         cmd: docker compose --progress=plain config
         chdir: "{{ __compose_install_dir.dir }}"
-      register: _docker_compose_validation
       changed_when: _docker_compose.changed
       when: not ansible_check_mode
 
@@ -25,7 +24,8 @@
       ansible.builtin.command:
         cmd: docker compose --progress=plain pull
         chdir: "{{ __compose_install_dir.dir }}"
-      changed_when: _docker_compose.changed
+      register: _docker_compose_pull
+      changed_when: ("Pulling" in (_docker_compose_pull.stderr_lines | trim))
       when: not ansible_check_mode
 
     - name: run | Ensure services are started
@@ -34,7 +34,7 @@
         cmd: docker compose --progress=plain up -d --remove-orphans
         chdir: "{{ __compose_install_dir.dir }}"
       register: _docker_compose_up
-      changed_when: _docker_compose.changed and (" Container {{ __container_name }}  Started" in _docker_compose_up.stderr_lines)
+      changed_when: ("Starting" in (_docker_compose_up.stderr_lines | trim))
       when: not __maintenance and not ansible_check_mode
 
     - name: run | Shut down services
@@ -43,5 +43,5 @@
         cmd: docker compose --progress=plain stop
         chdir: "{{ __compose_install_dir.dir }}"
       register: _docker_compose_stop
-      changed_when: (" Container {{ __container_name }}  Stopped" in _docker_compose_stop.stderr_lines)
+      changed_when: ("Stopped" in _docker_compose_stop.stderr_lines)
       when: __maintenance and not ansible_check_mode
