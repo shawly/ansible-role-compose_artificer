@@ -10,4 +10,5 @@
   changed_when: ("Started" in (_docker_compose_restart.stderr_lines | trim))
   vars:
     __compose_install_dir: "{{ lookup('vars', compose_artificer_role_prefix + '_compose_install_dir') }}"
-  when: not (_docker_compose.changed or _docker_compose_up.changed) and not ansible_check_mode
+    __maintenance: "{{ lookup('vars', compose_artificer_role_prefix + '_maintenance') }}"
+  when: not (compose_artificer_compose_file.changed or _docker_compose_up.changed) and not ansible_check_mode and not __maintenance
