@@ -199,6 +199,7 @@
   loop_control:
     loop_var: __var
   no_log: true
+  ignore_errors: true
 
 - name: set_facts | Pretty print vars
   ansible.builtin.debug:
