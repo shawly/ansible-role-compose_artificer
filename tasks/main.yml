@@ -1,5 +1,5 @@
 ---
-- name: Invalid usage error
+- name: Invalid usage error for {{ __compose_artificer_compose_project_name }}
   ansible.builtin.fail:
     msg:
       - shawly.compose_artificer must be used via import_role!

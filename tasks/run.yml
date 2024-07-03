@@ -1,22 +1,22 @@
 ---
 - name: run | Block
   vars:
-    __compose_install_dir: "{{ lookup('vars', __role_prefix + '_compose_install_dir') }}"
-    __compose_project_root_dir: "{{ lookup('vars', __role_prefix + '_compose_project_root_dir') }}"
-    __docker_compose_files: "{{ lookup('vars', __role_prefix + '_docker_compose_files', default=omit) }}"
-    __zfs_skip_snapshot: "{{ lookup('vars', __role_prefix + '_zfs_skip_snapshot', default=false) }}"
-    __maintenance: "{{ lookup('vars', __role_prefix + '_maintenance', default=false) }}"
-    __compose_project_dirs: "{{ lookup('vars', __role_prefix + '_compose_project_dirs') }}"
-    __container_name: "{{ lookup('vars', __role_prefix + '_container_name', default=__compose_project_name) }}"
+    __compose_install_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_install_dir') }}"
+    __compose_project_root_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_project_root_dir') }}"
+    __compose_files: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_files', default=omit) }}"
+    __zfs_skip_snapshot: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_skip_snapshot', default=false) }}"
+    __maintenance: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_maintenance', default=false) }}"
+    __compose_project_dirs: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_project_dirs') }}"
+    __container_name: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_container_name', default=_compose_artificer_compose_project_name) }}"
   block:
-    - name: run | Pull images
+    - name: run | Pull images for {{ __compose_artificer_compose_project_name }}
       become: true
       community.docker.docker_compose_v2_pull:
         project_src: "{{ __compose_install_dir.dir }}"
-        files: "{{ __docker_compose_files | default(omit) }}"
-      register: _docker_compose_pull
+        files: "{{ __compose_files | default(omit) }}"
+      register: __compose_artificer_compose_pull
 
-    - name: run | Ensure services are started
+    - name: run | Ensure services are started for {{ __compose_artificer_compose_project_name }}
       become: true
       community.docker.docker_compose_v2:
         project_src: "{{ __compose_install_dir.dir }}"
@@ -24,32 +24,38 @@
         remove_orphans: true
         wait: true
         wait_timeout: 60
-        files: "{{ __docker_compose_files | default(omit) }}"
-      register: _docker_compose_up
+        files: "{{ __compose_files | default(omit) }}"
+      register: __compose_artificer_compose_up
       when: not __maintenance
 
-    - name: run | Shut down services
+    - name: run | Shut down services for {{ __compose_artificer_compose_project_name }}
       become: true
       community.docker.docker_compose_v2:
         project_src: "{{ __compose_install_dir.dir }}"
         state: "stopped"
-        files: "{{ __docker_compose_files | default(omit) }}"
-      register: _docker_compose_stop
+        files: "{{ __compose_files | default(omit) }}"
+      register: __compose_artificer_compose_stop
       when: __maintenance
 
-    - name: run | Check if compose file backup was created
-      become: true
-      ansible.builtin.stat:
-        path: "{{ compose_artificer_compose_file.backup_file | default('/dummy/path') }}"
-      register: compose_artificer_compose_file_backup
+    - name: run | Find old compose file backups for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.find:
+        paths: "{{ __compose_install_dir.dir }}/"
+        # backup files always have date suffix (e.g. .1524428.2024-03-24@13:52:25~)
+        patterns: ".*compose\\.ya?ml\\.[0-9:@\\.\\-]+~"
+        use_regex: true
+      register: __compose_artificer_compose_file_backups
 
-    - name: run | Remove compose file backup
+    - name: run | Remove old compose file backups for {{ __compose_artificer_compose_project_name }}
       become: true
       ansible.builtin.file:
-        path: "{{ compose_artificer_compose_file.backup_file }}"
+        path: "{{ __backup_file.path }}"
         state: absent
-      when: compose_artificer_compose_file_backup.stat.exists
+      loop: "{{ __compose_artificer_compose_file_backups.files }}"
+      loop_control:
+        loop_var: __backup_file
+      when: __compose_artificer_compose_file_backups is defined
+
   rescue:
-    - name: run | Failure startup
+    - name: run | Failure startup for {{ __compose_artificer_compose_project_name }}
       ansible.builtin.fail:
         msg: "{{ ansible_failed_task }}"

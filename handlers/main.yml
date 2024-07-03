@@ -6,9 +6,9 @@
   community.docker.docker_compose_v2:
     project_src: "{{ __compose_install_dir.dir }}"
     state: "restarted"
-    files: "{{ __docker_compose_files | default(omit) }}"
+    files: "{{ __compose_files | default(omit) }}"
   vars:
-    __compose_install_dir: "{{ lookup('vars', compose_artificer_role_prefix + '_compose_install_dir') }}"
-    __maintenance: "{{ lookup('vars', compose_artificer_role_prefix + '_maintenance') }}"
-    __docker_compose_files: "{{ lookup('vars', compose_artificer_role_prefix + '_docker_compose_files', default=omit) }}"
-  when: not (compose_artificer_compose_file.changed or _docker_compose_up.changed) and not __maintenance
+    __compose_install_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_install_dir') }}"
+    __maintenance: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_maintenance') }}"
+    __compose_files: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_files', default=omit) }}"
+  when: not (compose_artificer_compose_file.changed or __compose_artificer_compose_up.changed) and not __maintenance

@@ -24,22 +24,10 @@ running, it should do the following:
 ## Usage
 
 `shawly.compose_artificer` should be used with the `ansible.builtin.import_role`
-task, the minimum required variables are
-`compose_artificer_compose_project_name` and `compose_artificer_role_prefix`. An
+task. An
 example `main.yml` would look like this:
 
 ```yaml
-# it is very important to set these via set_fact and not as vars for import_role, otherwise `role_name` will contain "compose_artificer" instead of "myrole"!
-- name: Set facts for shawly.compose_artificer
-  ansible.builtin.set_fact:
-    # make sure to keep {{ role_name }}
-    compose_artificer_role_prefix: "{{ role_name }}"
-    compose_artificer_compose_project_name:
-      "{{ myrole_compose_project_name | default(role_name) }}"
-  tags:
-    - myrole_install
-    - myrole_run
-
 - name: Set facts for {{ role_name }}
   ansible.builtin.import_role:
     name: shawly.compose_artificer

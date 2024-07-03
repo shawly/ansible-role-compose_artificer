@@ -1,11 +1,11 @@
 ---
 - name: install_unraid | Block
   vars:
-    __compose_install_dir: "{{ lookup('vars', __role_prefix + '_compose_install_dir') }}"
-    __compose_project_root_dir: "{{ lookup('vars', __role_prefix + '_compose_project_root_dir') }}"
-    __unraid_icon: "{{ lookup('vars', __role_prefix + '_unraid_icon') }}"
-    __unraid_webui: "{{ lookup('vars', __role_prefix + '_unraid_webui', default=omit) }}"
-    __unraid_shell: "{{ lookup('vars', __role_prefix + '_unraid_shell') }}"
+    __compose_install_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_install_dir') }}"
+    __compose_project_root_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_project_root_dir') }}"
+    __unraid_icon: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_unraid_icon') }}"
+    __unraid_webui: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_unraid_webui', default=omit) }}"
+    __unraid_shell: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_unraid_shell') }}"
   block:
     - name: install_unraid | Fix libffi.so.7 error for Python
       ansible.builtin.copy:
@@ -19,7 +19,6 @@
       ansible.builtin.pip:
         name:
           - docker
-          - docker-compose
 
     - name: install_unraid | Upload name file for UnRAID hosts
       ansible.builtin.template:
@@ -48,13 +47,13 @@
     - name: install_unraid | Upload icon for UnRAID hosts
       ansible.builtin.copy:
         src: "{{ item }}"
-        dest: /mnt/user/system/plugins/dynamix.docker.manager/images/{{ __role_prefix }}-icon.png
+        dest: /mnt/user/system/plugins/dynamix.docker.manager/images/{{ __compose_artificer_parent_role_prefix }}-icon.png
         owner: root
         group: root
         mode: "0644"
       # noqa loop-var-prefix[missing]
       with_fileglob:
-        - unraid/icons/containers/{{ __role_prefix }}.png
+        - unraid/icons/containers/{{ __compose_artificer_parent_role_prefix }}.png
   rescue:
     - name: install_unraid | Failure during UnRAID installation
       ansible.builtin.fail:
