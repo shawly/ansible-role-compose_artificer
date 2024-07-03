@@ -128,6 +128,10 @@
     file: docker-compose.yml
     name: __docker_compose_vars
 
+- name: set_facts | Reset __docker_compose_updates
+  ansible.builtin.set_fact:
+    __docker_compose_updates: []
+
 - name: set_facts | Build the list of updates to make
   ansible.builtin.set_fact:
     __docker_compose_updates: "{{ (__docker_compose_updates | default([{'path': '__docker_compose_vars', 'value': __docker_compose_vars}])) + entries }}"

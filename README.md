@@ -104,8 +104,6 @@ nginx_traefik_port: 80
 
 ```yaml
 ---
-version: "3"
-
 services:
   app:
     image:
