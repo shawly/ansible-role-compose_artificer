@@ -4,12 +4,10 @@
     __migrate_dir: "{{ lookup('vars', __role_prefix + '_migrate_dir') | default(omit) }}"
     __compose_install_dir: "{{ lookup('vars', __role_prefix + '_compose_install_dir') }}"
     __compose_project_root_dir: "{{ lookup('vars', __role_prefix + '_compose_project_root_dir') }}"
-    __docker_compose_files: "{{ lookup('vars', __role_prefix + '_docker_compose_files', default=['docker-compose.yml']) }}"
+    __docker_compose_files: "{{ lookup('vars', __role_prefix + '_docker_compose_files', default=omit) }}"
     __do_migrate: __migrate_dir is defined and __migrate_dir != __compose_install_dir.dir and __migrate_dir != __compose_project_root_dir.dir
     __container_name: "{{ lookup('vars', __role_prefix + '_container_name', default=__compose_project_name) }}"
   when: __do_migrate
-  environment:
-    COMPOSE_FILE: "{{ __docker_compose_files }}"
   block:
     - name: migrate | Check if migrate_dir exists
       become: true
@@ -19,11 +17,10 @@
 
     - name: migrate | Shut down all services
       become: true
-      ansible.builtin.command:
-        cmd: docker compose --progress=plain stop
-        chdir: "{{ __migrate_dir }}"
-      register: _docker_compose_stop
-      changed_when: (" Container {{ __container_name }}  Stopped" in _docker_compose_stop.stderr_lines)
+      community.docker.docker_compose_v2:
+        project_src: "{{ __migrate_dir }}"
+        state: "stopped"
+        files: "{{ __docker_compose_files | default(omit) }}"
       ignore_errors: true
       when: __migrate_dir_result.stat.exists
 
