@@ -11,4 +11,4 @@
     __compose_install_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_install_dir') }}"
     __maintenance: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_maintenance') }}"
     __compose_files: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_files', default=omit) }}"
-  when: not (compose_artificer_compose_file.changed or __compose_artificer_compose_up.changed) and not __maintenance
+  when: not (__compose_artificer_compose_file.changed or __compose_artificer_compose_up.changed) and not __maintenance
