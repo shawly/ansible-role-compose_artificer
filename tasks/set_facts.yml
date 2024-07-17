@@ -29,7 +29,7 @@
     __compose_artificer_parent_role_prefix: "{{ __parent_role_prefix }}"
     __compose_artificer_compose_project_name: "{{ lookup('vars', __parent_role_prefix + '_compose_project_name', default=__parent_role_prefix) }}"
   vars:
-    __parent_role_prefix: "{{ ansible_parent_role_names | first | split('.') | last }}"  # remove namespace from rolename if present
+    __parent_role_prefix: "{{ ansible_parent_role_names | first | split('.') | last }}" # remove namespace from rolename if present
 
 - name: set_facts | Fetch OS dependent variables for {{ __compose_artificer_compose_project_name }}
   ansible.builtin.include_vars:
