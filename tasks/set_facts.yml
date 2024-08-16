@@ -135,7 +135,7 @@
 
 - name: set_facts | Build the list of updates to make for {{ __compose_artificer_compose_project_name }}
   ansible.builtin.set_fact:
-    __compose_artificer_compose_updates: "{{ (_compose_artificer_compose_updates | default([{'path': '__compose_artificer_compose_vars', 'value': __compose_artificer_compose_vars}])) + entries }}"
+    __compose_artificer_compose_updates: "{{ (__compose_artificer_compose_updates | default([{'path': '__compose_artificer_compose_vars', 'value': __compose_artificer_compose_vars}])) + entries }}"
   vars:
     entries:
       - path: __compose_artificer_compose_vars.services.{{ __service }}
