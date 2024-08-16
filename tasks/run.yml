@@ -8,6 +8,7 @@
     __maintenance: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_maintenance', default=false) }}"
     __compose_project_dirs: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_project_dirs') }}"
     __container_name: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_container_name', default=_compose_artificer_compose_project_name) }}"
+    __compose_up_wait_timeout: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_up_wait_timeout', default=60) }}"
   block:
     - name: run | Pull images for {{ __compose_artificer_compose_project_name }}
       become: true
@@ -23,7 +24,7 @@
         pull: "always"
         remove_orphans: true
         wait: true
-        wait_timeout: 60
+        wait_timeout: "{{ __compose_up_wait_timeout }}"
         files: "{{ __compose_files | default(omit) }}"
       register: __compose_artificer_compose_up
       when: not __maintenance
