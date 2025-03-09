@@ -9,12 +9,14 @@
     __compose_project_dirs: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_project_dirs') }}"
     __container_name: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_container_name', default=_compose_artificer_compose_project_name) }}"
     __compose_up_wait_timeout: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_up_wait_timeout', default=60) }}"
+    __compose_profiles: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_profiles', default=omit) }}"
   block:
     - name: run | Pull images for {{ __compose_artificer_compose_project_name }}
       become: true
       community.docker.docker_compose_v2_pull:
         project_src: "{{ __compose_install_dir.dir }}"
         files: "{{ __compose_files | default(omit) }}"
+        profiles: "{{ __compose_profiles | default(omit) }}"
       register: __compose_artificer_compose_pull
 
     - name: run | Ensure services are started for {{ __compose_artificer_compose_project_name }}
@@ -26,6 +28,7 @@
         wait: true
         wait_timeout: "{{ __compose_up_wait_timeout }}"
         files: "{{ __compose_files | default(omit) }}"
+        profiles: "{{ __compose_profiles | default(omit) }}"
       register: __compose_artificer_compose_up
       when: not __maintenance
 
@@ -35,6 +38,7 @@
         project_src: "{{ __compose_install_dir.dir }}"
         state: "stopped"
         files: "{{ __compose_files | default(omit) }}"
+        profiles: "{{ __compose_profiles | default(omit) }}"
       register: __compose_artificer_compose_stop
       when: __maintenance
 
