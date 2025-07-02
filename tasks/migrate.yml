@@ -27,7 +27,7 @@
       become: true
       community.docker.docker_compose_v2:
         project_src: "{{ __migrate_dir }}"
-        state: "stopped"
+        state: "absent"
         files: "{{ __compose_files | default(omit) }}"
       ignore_errors: true
       when: __compose_artificer_migrate_dir_result.stat.exists
