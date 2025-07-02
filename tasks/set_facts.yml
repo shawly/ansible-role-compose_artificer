@@ -196,6 +196,7 @@
     msg: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_content') | to_nice_yaml(indent=2) }}"
 
 - name: set_facts | Gather btrfs info from current host
+  become: true
   community.general.btrfs_info:
   register: __compose_artificer_btrfs_info
   when:
@@ -203,6 +204,7 @@
     - ansible_facts.mounts | selectattr('fstype', 'equalto', 'btrfs') | list | length > 0
 
 - name: set_facts | Gather zfs info for pools
+  become: true
   community.general.zpool_facts:
   register: __compose_artificer_zpool_facts
   when: __compose_artificer_zpool_facts is not defined
@@ -211,6 +213,7 @@
     __zfs_root_pool: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_pool') }}"
 
 - name: Gather facts about ZFS dataset {{ __zfs_root_dataset }}
+  become: true
   community.general.zfs_facts:
     dataset: "{{ __zfs_root_dataset }}"
   register: __compose_artificer_zfs_facts
