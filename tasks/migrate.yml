@@ -65,24 +65,25 @@
         __all_subvolumes: "{{ __btrfs_subvolumes + __btrfs_additional_subvolumes | sort }}"
       register: __btrfs_subvolume_create_results
 
-    - name: migrate | Create mountpoints for btrfs subvolumes for {{ __compose_artificer_compose_project_name }}
+    - name: install_btrfs | Create mountpoints for btrfs subvolumes for {{ __compose_artificer_compose_project_name }}
       become: true
       ansible.posix.mount:
-        path: "{{ __subvolume_path }}"
-        src: "UUID={{ __compose_artificer_btrfs_info.filesystems | selectattr('label', '==', __btrfs_filesystem_label) | map(attribute='uuid') | first }}"
+        path: "{{ __subvolume_create_result.__subvolume_path }}"
+        src: "UUID={{ __subvolume_create_result.filesystem.uuid }}"
         state: mounted
         fstype: btrfs
         passno: 2
-        opts: "subvol={{ __btrfs_subvolume_prefix }}{{ __subvolume_path | regex_replace('^/', '') | replace('/', '-') }},{{ __btrfs_mount_options[__subvolume_path] | default(__btrfs_default_mount_options) }}"
+        opts: "subvol={{ __target_subvolume.path | regex_replace('^/', '') }},{{ __btrfs_mount_options[__subvolume_create_result.__subvolume_path] | default(__btrfs_default_mount_options) }}"
       when:
-        - __compose_artificer_btrfs_info is defined
-        - __compose_artificer_btrfs_info.filesystems is defined
-        - __compose_artificer_btrfs_info.filesystems | selectattr('label', '==', __btrfs_filesystem_label) | length > 0
-      loop: "{{ __all_subvolumes }}"
+        - __btrfs_subvolume_create_results is defined
+        - __subvolume_create_result.target_subvolume_id is defined
+        - __target_subvolume is defined
+      loop: "{{ __btrfs_subvolume_create_results.results | default([]) }}"
       loop_control:
-        loop_var: __subvolume_path
+        loop_var: __subvolume_create_result
       vars:
-        __all_subvolumes: "{{ __btrfs_subvolumes + __btrfs_additional_subvolumes | sort }}"
+        # Find the target subvolume by its ID and get its path
+        __target_subvolume: "{{ __subvolume_create_result.filesystem.subvolumes | selectattr('id', '==', __subvolume_create_result.target_subvolume_id) | first }}"
 
     - name: migrate | Migrate data from old location to default location for {{ __compose_artificer_compose_project_name }}
       become: true
