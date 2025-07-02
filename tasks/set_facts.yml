@@ -68,10 +68,10 @@
       _compose_install_dir: "{{ __compose_artificer_default_compose_install_dir }}"
       _compose_overrides: {}
       _default_service_template: "{{ compose_artificer_default_service_template }}"
-      _zfs_snapshot: "{{ zfs_snapshot | default(compose_artificer_default_zfs_snapshot) }}"
+      _zfs_skip_snapshot: "{{ zfs_skip_snapshot | default(compose_artificer_default_zfs_skip_snapshot) }}"
       _zfs_root_pool: "{{ zfs_root_pool | default(compose_artificer_default_zfs_root_pool) }}"
       _zfs_root_dataset: "{{ zfs_root_dataset | default(compose_artificer_default_zfs_root_dataset) }}"
-      _btrfs_snapshot: "{{ btrfs_snapshot | default(compose_artificer_default_btrfs_snapshot) }}"
+      _btrfs_skip_snapshot: "{{ btrfs_skip_snapshot | default(compose_artificer_default_btrfs_skip_snapshot) }}"
       _btrfs_filesystem_label: "{{ btrfs_filesystem_label | default(compose_artificer_default_btrfs_filesystem_label) }}"
       _btrfs_subvolume_prefix: "{{ btrfs_subvolume_prefix | default(compose_artificer_default_btrfs_subvolume_prefix) }}"
       _btrfs_default_mount_options: "{{ btrfs_default_mount_options | default(compose_artificer_default_btrfs_default_mount_options) }}"

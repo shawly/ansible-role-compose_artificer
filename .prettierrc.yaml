@@ -9,7 +9,7 @@ overrides:
     options:
       # compatibility with markdownlint
       proseWrap: always
-      printWidth: 80
+      printWidth: 120
   - files:
       - "*.yaml"
       - "*.yml"
