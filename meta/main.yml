@@ -24,6 +24,6 @@ galaxy_info:
 dependencies: []
 
 collections:
-- community.docker
-- ansible.posix
-- community.general
+  - community.docker
+  - ansible.posix
+  - community.general
