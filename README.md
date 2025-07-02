@@ -195,10 +195,10 @@ nginx_default_compose_project_dirs:
     recurse: true
 ```
 
-**`nginx/tasks/install.yml`**
+**`nginx/tasks/post_install.yml`**
 
 ```yaml
-- name: install | Upload nginx.conf file
+- name: post_install | Upload nginx.conf file
   become: true
   ansible.builtin.copy:
     src: "{{ item }}"
@@ -234,6 +234,26 @@ nginx_compose_overrides:
         traefik.http.routers.nginx.rule: >-
           Host(`{{ nginx_traefik_subdomain }}.{{ nginx_traefik_domain }}`) || Host(`{{ nginx_traefik_domain }}`)
 ```
+
+#### Pre and Post Hook Tasks
+
+The skeleton role includes a comprehensive hook system that allows you to execute custom tasks at specific points during
+the role execution. This provides maximum flexibility for customizing the deployment process without modifying the core
+framework logic.
+
+The following hook task files are available in the skeleton:
+
+- **`tasks/pre_set_facts.yml`** - Executed before setting role facts and variables
+- **`tasks/post_set_facts.yml`** - Executed after setting role facts and variables
+- **`tasks/pre_migrate.yml`** - Executed before migration tasks (useful for data backup or preparation)
+- **`tasks/post_migrate.yml`** - Executed after migration tasks (useful for data validation or cleanup)
+- **`tasks/pre_install.yml`** - Executed before creating directories and installing compose files
+- **`tasks/post_install.yml`** - Executed after creating directories and installing compose files
+- **`tasks/pre_run.yml`** - Executed before starting/restarting the Docker Compose stack
+- **`tasks/post_run.yml`** - Executed after starting/restarting the Docker Compose stack
+
+Each hook task file is included conditionally based on its existence, so you only need to implement the hooks you
+actually use. By default, all hook files contain simple debug messages to provide visibility into the execution flow.
 
 ## Role Variables
 
