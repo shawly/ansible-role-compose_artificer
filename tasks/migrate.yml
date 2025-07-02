@@ -7,6 +7,14 @@
     __compose_files: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_files', default=omit) }}"
     __do_migrate: __migrate_dir is defined and __migrate_dir != __compose_install_dir.dir and __migrate_dir != __compose_project_root_dir.dir
     __container_name: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_container_name', default=_compose_artificer_compose_project_name) }}"
+    __zfs_datasets: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
+    __zfs_additional_datasets: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_additional_datasets', default=[]) }}"
+    __btrfs_filesystem_label: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_filesystem_label') }}"
+    __btrfs_subvolume_prefix: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_subvolume_prefix' }}"
+    __btrfs_subvolumes: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
+    __btrfs_additional_subvolumes: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_additional_subvolumes', default=[]) }}"
+    __btrfs_mount_options: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_mount_options', default={}) }}"
+    __btrfs_default_mount_options: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_default_mount_options', default='defaults') }}"
   when: __do_migrate
   block:
     - name: migrate | Check if migrate_dir exists for {{ __compose_artificer_compose_project_name }}
@@ -29,12 +37,52 @@
       community.general.zfs:
         name: "{{ __zfs_root_dataset }}{{ __dataset }}"
         state: present
-      when: "__compose_artificer_migrate_dir_result.stat.exists and ansible_zfs_datasets is defined and ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length"
+      when:
+        - __compose_artificer_migrate_dir_result.stat.exists
+        - ansible_zfs_datasets is defined
+        - ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length
       loop: "{{ __datasets }}"
       loop_control:
         loop_var: __dataset
       vars:
         __datasets: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
+
+    - name: migrate | Create subvolumes for {{ __compose_artificer_compose_project_name }}
+      become: true
+      community.general.btrfs_subvolume:
+        name: "{{ __btrfs_subvolume_prefix }}{{ __subvolume_path | regex_replace('^/', '') | replace('/', '-') }}"
+        state: present
+        filesystem_label: "{{ __btrfs_filesystem_label }}"
+      when:
+        - __compose_artificer_migrate_dir_result.stat.exists
+        - __compose_artificer_btrfs_info is defined
+        - __compose_artificer_btrfs_info.filesystems is defined
+        - __compose_artificer_btrfs_info.filesystems | selectattr('label', '==', __btrfs_filesystem_label) | length > 0
+      loop: "{{ __all_subvolumes }}"
+      loop_control:
+        loop_var: __subvolume_path
+      vars:
+        __all_subvolumes: "{{ __btrfs_subvolumes + __btrfs_additional_subvolumes | sort }}"
+      register: __btrfs_subvolume_create_results
+
+    - name: migrate | Create mountpoints for btrfs subvolumes for {{ __compose_artificer_compose_project_name }}
+      become: true
+      ansible.posix.mount:
+        path: "{{ __subvolume_path }}"
+        src: "UUID={{ __compose_artificer_btrfs_info.filesystems | selectattr('label', '==', __btrfs_filesystem_label) | map(attribute='uuid') | first }}"
+        state: mounted
+        fstype: btrfs
+        passno: 2
+        opts: "subvol={{ __btrfs_subvolume_prefix }}{{ __subvolume_path | regex_replace('^/', '') | replace('/', '-') }},{{ __btrfs_mount_options[__subvolume_path] | default(__btrfs_default_mount_options) }}"
+      when:
+        - __compose_artificer_btrfs_info is defined
+        - __compose_artificer_btrfs_info.filesystems is defined
+        - __compose_artificer_btrfs_info.filesystems | selectattr('label', '==', __btrfs_filesystem_label) | length > 0
+      loop: "{{ __all_subvolumes }}"
+      loop_control:
+        loop_var: __subvolume_path
+      vars:
+        __all_subvolumes: "{{ __btrfs_subvolumes + __btrfs_additional_subvolumes | sort }}"
 
     - name: migrate | Migrate data from old location to default location for {{ __compose_artificer_compose_project_name }}
       become: true

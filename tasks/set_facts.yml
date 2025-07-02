@@ -68,9 +68,13 @@
       _compose_install_dir: "{{ __compose_artificer_default_compose_install_dir }}"
       _compose_overrides: {}
       _default_service_template: "{{ compose_artificer_default_service_template }}"
-      _zfs_snapshot: true
+      _zfs_snapshot: "{{ zfs_snapshot | default(compose_artificer_default_zfs_snapshot) }}"
       _zfs_root_pool: "{{ zfs_root_pool | default(compose_artificer_default_zfs_root_pool) }}"
       _zfs_root_dataset: "{{ zfs_root_dataset | default(compose_artificer_default_zfs_root_dataset) }}"
+      _btrfs_snapshot: "{{ btrfs_snapshot | default(compose_artificer_default_btrfs_snapshot) }}"
+      _btrfs_filesystem_label: "{{ btrfs_filesystem_label | default(compose_artificer_default_btrfs_filesystem_label) }}"
+      _btrfs_subvolume_prefix: "{{ btrfs_subvolume_prefix | default(compose_artificer_default_btrfs_subvolume_prefix) }}"
+      _btrfs_default_mount_options: "{{ btrfs_default_mount_options | default(compose_artificer_default_btrfs_default_mount_options) }}"
       _traefik_domain: "{{ traefik_domain | default('') }}"
       _traefik_subdomain: "{{ __compose_artificer_compose_project_name | replace('_', '-') }}"
       _traefik_port: "80"
@@ -191,12 +195,36 @@
   vars:
     msg: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_content') | to_nice_yaml(indent=2) }}"
 
-- name: set_facts | Reset all vars for {{ __compose_artificer_compose_project_name }}
+- name: set_facts | Gather btrfs info from current host
+  community.general.btrfs_info:
+  register: __compose_artificer_btrfs_info
+  when:
+    - ansible_facts.mounts is defined
+    - ansible_facts.mounts | selectattr('fstype', 'equalto', 'btrfs') | list | length > 0
+
+- name: set_facts | Gather zfs info for pools
+  community.general.zpool_facts:
+  register: __compose_artificer_zpool_facts
+  when: __compose_artificer_zpool_facts is not defined
+  failed_when: ansible_zfs_pools is defined and __zfs_root_pool is defined and (ansible_zfs_pools | selectattr('name', '==', __zfs_root_pool) | length) == 0
+  vars:
+    __zfs_root_pool: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_pool') }}"
+
+- name: Gather facts about ZFS dataset {{ __zfs_root_dataset }}
+  community.general.zfs_facts:
+    dataset: "{{ __zfs_root_dataset }}"
+  register: __compose_artificer_zfs_facts
+  when: ansible_zfs_pools is defined and __zfs_root_pool is defined and (ansible_zfs_pools | selectattr('name', '==', __zfs_root_pool) | length) != 0
+  vars:
+    __zfs_root_pool: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_pool') }}"
+    __zfs_root_dataset: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_dataset') }}"
+
+- name: set_facts | Reset debug vars for {{ __compose_artificer_compose_project_name }}
   ansible.builtin.set_fact:
     __compose_artificer_debug_vars: {}
   no_log: true
 
-- name: set_facts | Gather all vars for {{ __compose_artificer_compose_project_name }}
+- name: set_facts | Gather debug vars for {{ __compose_artificer_compose_project_name }}
   ansible.builtin.set_fact:
     __compose_artificer_debug_vars: "{{ (_compose_artificer_debug_vars | default({})) | combine({__var: lookup('vars', __var)}) }}"
   loop: "{{ query('varnames', '^(' + __compose_artificer_parent_role_prefix + '|compose_artificer)_.+$') }}"
@@ -205,7 +233,7 @@
   no_log: true
   ignore_errors: true
 
-- name: set_facts | Pretty print vars for {{ __compose_artificer_compose_project_name }}
+- name: set_facts | Pretty print debug vars for {{ __compose_artificer_compose_project_name }}
   ansible.builtin.debug:
     var: __compose_artificer_debug_vars
     verbosity: 2

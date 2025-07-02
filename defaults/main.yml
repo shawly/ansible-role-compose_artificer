@@ -25,8 +25,15 @@ compose_artificer_default_service_template:
     - /etc/localtime:/etc/localtime:ro
 
 # default zfs settings
+compose_artificer_default_zfs_snapshot: true  # always create snapshots when run
 compose_artificer_default_zfs_root_pool: zroot
 compose_artificer_default_zfs_root_dataset: "{{ compose_artificer_default_zfs_root_pool }}/ROOT/ubuntu"
+
+# default btrfs settings
+compose_artificer_default_btrfs_snapshot: true  # always create snapshots when run
+compose_artificer_default_btrfs_filesystem_label: data  # label of the btrfs filesystem to use
+compose_artificer_default_btrfs_subvolume_prefix: "@"  # prefix for btrfs subvolumes
+compose_artificer_default_btrfs_default_mount_options: "defaults,compress=zstd,noatime,nodiratime,ssd,discard=async"  # default mount options for btrfs subvolumes
 
 # default dir settings
 compose_artificer_default_dir_owner: root

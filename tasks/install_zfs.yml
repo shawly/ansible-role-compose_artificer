@@ -1,0 +1,37 @@
+---
+- name: install_zfs | Block
+  vars:
+    __zfs_skip_snapshot: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_skip_snapshot', default=false) }}"
+    __zfs_root_dataset: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_dataset') }}"
+    __zfs_datasets: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
+    __zfs_additional_datasets: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_additional_datasets', default=[]) }}"
+  block:
+    - name: install_zfs | Create dataset for {{ __compose_artificer_compose_project_name }}
+      become: true
+      community.general.zfs:
+        name: "{{ __zfs_root_dataset }}{{ __dataset }}"
+        state: present
+      when:
+        - ansible_zfs_datasets is defined
+        - ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length
+      loop: "{{ __zfs_datasets }}"
+      loop_control:
+        loop_var: __dataset
+      vars:
+        __all_datasets: "{{ __zfs_datasets + __zfs_additional_datasets | sort }}"
+
+    - name: install_zfs | Create snapshot of datasets for {{ __compose_artificer_compose_project_name }}
+      become: true
+      community.general.zfs:
+        name: "{{ __zfs_root_dataset }}{{ __dataset }}@ansible-{{ ansible_date_time.iso8601_basic_short }}"
+        state: present
+      when:
+        - not __zfs_skip_snapshot
+        - not __maintenance
+        - ansible_zfs_datasets is defined
+        - ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length"
+      loop: "{{ __all_datasets }}"
+      loop_control:
+        loop_var: __dataset
+      vars:
+        __all_datasets: "{{ __zfs_datasets + __zfs_additional_datasets | sort }}"

@@ -4,35 +4,21 @@
     __compose_install_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_install_dir') }}"
     __compose_project_root_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_project_root_dir') }}"
     __compose_files: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_files') | default(omit) }}"
-    __zfs_skip_snapshot: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_skip_snapshot', default=false) }}"
-    __zfs_root_dataset: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_dataset') }}"
     __maintenance: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_maintenance', default=false) }}"
     __compose_project_dirs: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_project_dirs') }}"
     __compose_content: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_content') }}"
   block:
-    - name: install | Create dataset for {{ __compose_artificer_compose_project_name }}
+    - name: install | Execute zfs tasks for {{ __compose_artificer_compose_project_name }}
       become: true
-      community.general.zfs:
-        name: "{{ __zfs_root_dataset }}{{ __dataset }}"
-        state: present
-      when: ansible_zfs_datasets is defined and ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length
-      loop: "{{ __datasets }}"
-      loop_control:
-        loop_var: __dataset
-      vars:
-        __datasets: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
+      ansible.builtin.import_tasks: install_zfs.yml
+      when:
+        - ansible_zfs_datasets is defined
 
-    - name: install | Create snapshot of datasets for {{ __compose_artificer_compose_project_name }}
+    - name: install | Execute btrfs tasks for {{ __compose_artificer_compose_project_name }}
       become: true
-      community.general.zfs:
-        name: "{{ __zfs_root_dataset }}{{ __dataset }}@ansible-{{ ansible_date_time.iso8601_basic_short }}"
-        state: present
-      when: "not __zfs_skip_snapshot and not __maintenance and ansible_zfs_datasets is defined and ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length"
-      loop: "{{ __datasets }}"
-      loop_control:
-        loop_var: __dataset
-      vars:
-        __datasets: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
+      ansible.builtin.import_tasks: install_btrfs.yml
+      when:
+        - __compose_artificer_btrfs_info is defined
 
     - name: install | Create directories for {{ __compose_artificer_compose_project_name }}
       become: true
