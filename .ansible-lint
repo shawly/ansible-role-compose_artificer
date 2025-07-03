@@ -12,6 +12,7 @@ profile: # min, basic, moderate,safety, shared, production
 exclude_paths:
   - .ansible-lint
   - .prettierrc.yaml
+  - .markdownlint.yaml
   - docker-compose.yml
   - .venv/
   - .cache/ # implicit unless exclude_paths is defined in config
