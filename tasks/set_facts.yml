@@ -212,7 +212,7 @@
   vars:
     __zfs_root_pool: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_pool') }}"
 
-- name: Gather facts about ZFS dataset {{ __zfs_root_dataset }}
+- name: set_facts | Gather facts about ZFS dataset {{ __zfs_root_dataset }}
   become: true
   community.general.zfs_facts:
     dataset: "{{ __zfs_root_dataset }}"
@@ -234,7 +234,7 @@
   loop_control:
     loop_var: __var
   no_log: true
-  ignore_errors: true
+  failed_when: false
 
 - name: set_facts | Pretty print debug vars for {{ __compose_artificer_compose_project_name }}
   ansible.builtin.debug:

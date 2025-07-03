@@ -52,6 +52,7 @@
       become: true
       ansible.builtin.command:
         cmd: "btrfs property set {{ __snapshot_mountpoint }}{{ __snapshot_subvolume.path }} ro true"
+      changed_when: false
       when:
         - __btrfs_snapshot_create_results is defined
         - __snapshot_create_result.changed is defined

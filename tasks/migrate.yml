@@ -29,7 +29,7 @@
         project_src: "{{ __migrate_dir }}"
         state: "absent"
         files: "{{ __compose_files | default(omit) }}"
-      ignore_errors: true
+      failed_when: false
       when: __compose_artificer_migrate_dir_result.stat.exists
 
     - name: migrate | Create datasets for {{ __compose_artificer_compose_project_name }}
@@ -65,7 +65,7 @@
         __all_subvolumes: "{{ __btrfs_subvolumes + __btrfs_additional_subvolumes | sort }}"
       register: __btrfs_subvolume_create_results
 
-    - name: install_btrfs | Create mountpoints for btrfs subvolumes for {{ __compose_artificer_compose_project_name }}
+    - name: migrate | Create mountpoints for btrfs subvolumes for {{ __compose_artificer_compose_project_name }}
       become: true
       ansible.posix.mount:
         path: "{{ __subvolume_create_result.__subvolume_path }}"
