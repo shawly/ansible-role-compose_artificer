@@ -35,3 +35,7 @@
         loop_var: __dataset
       vars:
         __all_datasets: "{{ __zfs_datasets + __zfs_additional_datasets | sort }}"
+  rescue:
+    - name: install_zfs | ZFS handling failed for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"

@@ -92,3 +92,7 @@
       vars:
         # Find the target subvolume by its ID and get its path
         __target_subvolume: "{{ __subvolume_create_result.filesystem.subvolumes | selectattr('id', '==', __subvolume_create_result.target_subvolume_id) | first }}"
+  rescue:
+    - name: install_btrfs | BTRFS handling failed for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"
