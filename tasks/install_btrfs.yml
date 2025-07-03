@@ -1,7 +1,7 @@
 ---
 - name: install_btrfs | Block
   vars:
-    __btrfs_snapshot_timestamp: "{{ ansible_date_time.iso8601_basic }}"
+    __btrfs_snapshot_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
     __btrfs_skip_snapshot: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_skip_snapshot', default=false) }}"
     __btrfs_filesystem_label: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_filesystem_label') }}"
     __btrfs_subvolume_prefix: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_subvolume_prefix') }}"
