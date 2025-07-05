@@ -29,7 +29,7 @@
         - not __zfs_skip_snapshot
         - not __maintenance
         - ansible_zfs_datasets is defined
-        - ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length"
+        - ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length
       loop: "{{ __all_datasets }}"
       loop_control:
         loop_var: __dataset
