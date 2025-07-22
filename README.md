@@ -29,6 +29,14 @@ need tests.
 - Installs UnRAID-specific files for composeman integration (if running on UnRAID)
 - Includes error handling with automatic rollback on failure
 
+**install_zfs.yml**
+
+If the compose project will be installed on a ZFS filesystem, this task will create the necessary ZFS datasets.
+
+**install_btrfs.yml**
+
+If the compose project will be installed on a BTRFS filesystem, this task will create the necessary BTRFS subvolumes.
+
 **migrate.yml**
 
 - This task will migrate data from another location to the new project directory if necessary. This is useful for
@@ -193,6 +201,8 @@ nginx_default_compose_project_dirs:
     group: "101"
     mode: "0755"
     recurse: true
+  # on a btrfs filesystem use attributes to adjust CoW if necessary e.g.
+    attributes: +C  # for disabling CoW
 ```
 
 **`nginx/tasks/post_install.yml`**
@@ -290,8 +300,8 @@ This is a list of all role variables for `shawly.compose_artificer`:
   - Default: `data`
 - `compose_artificer_default_btrfs_subvolume_prefix`: The prefix for BTRFS subvolumes (the @ is a SUSE convention).
   - Default: `@`
-- `compose_artificer_default_btrfs_default_mount_options`: Default mount options for BTRFS subvolumes.
-  - Default: `defaults,compress=zstd,noatime,nodiratime,ssd,discard=async`
+- `compose_artificer_default_btrfs_default_mount_options`: Default mount options for BTRFS subvolumes, keep in mind that changing this affects all subvolumes on that partition!
+  - Default: `defaults,compress=zstd,noatime`
 
 ### Role-specific Variables
 
@@ -309,8 +319,7 @@ When using this role, you can also configure additional variables in your depend
 - `{role_prefix}_btrfs_filesystem_label`: Override the Btrfs filesystem label for this role.
 - `{role_prefix}_btrfs_subvolume_prefix`: Override the Btrfs subvolume prefix for this role.
 - `{role_prefix}_btrfs_additional_subvolumes`: List of additional Btrfs subvolumes to create.
-- `{role_prefix}_btrfs_mount_options`: Dictionary of custom mount options per path.
-- `{role_prefix}_btrfs_default_mount_options`: Override default mount options for this role.
+- `{role_prefix}_btrfs_default_mount_options`: Override default mount options for subvolumes created by this role.
 
 #### Other Configuration
 

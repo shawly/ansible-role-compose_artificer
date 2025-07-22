@@ -29,6 +29,7 @@
         group: "{{ __folder.value.group | default(compose_artificer_default_dir_group) }}"
         mode: "{{ __folder.value.mode | default(compose_artificer_default_dir_mode) }}"
         recurse: "{{ __folder.value.recurse | default(compose_artificer_default_dir_recurse) }}"
+        attributes: "{{ __folder.value.attributes | default(omit) }}"
       register: __compose_artificer_project_dir_creation
       loop: "{{ __compose_project_dirs | dict2items }}"
       loop_control:
