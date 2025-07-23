@@ -84,6 +84,13 @@
         # Find the target subvolume by its ID and get its path
         __target_subvolume: "{{ __subvolume_create_result.filesystem.subvolumes | selectattr('id', '==', __subvolume_create_result.target_subvolume_id) | first }}"
 
+    - name: migrate | Install rsync
+      become: true
+      ansible.builtin.package:
+        name: rsync
+        state: present
+      when: __compose_artificer_migrate_dir_result.stat.exists
+
     - name: migrate | Migrate data from old location to default location for {{ __compose_artificer_compose_project_name }}
       become: true
       ansible.posix.synchronize:
