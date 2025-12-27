@@ -208,7 +208,7 @@
   community.general.zpool_facts:
   register: __compose_artificer_zpool_facts
   when: __compose_artificer_zpool_facts is not defined
-  failed_when: ansible_zfs_pools is defined and __zfs_root_pool is defined and (ansible_zfs_pools | selectattr('name', '==', __zfs_root_pool) | length) == 0
+  failed_when: ansible_facts['zfs_pools'] is defined and __zfs_root_pool is defined and (ansible_facts['zfs_pools'] | selectattr('name', '==', __zfs_root_pool) | length) == 0
   vars:
     __zfs_root_pool: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_pool') }}"
 
@@ -217,7 +217,7 @@
   community.general.zfs_facts:
     dataset: "{{ __zfs_root_dataset }}"
   register: __compose_artificer_zfs_facts
-  when: ansible_zfs_pools is defined and __zfs_root_pool is defined and (ansible_zfs_pools | selectattr('name', '==', __zfs_root_pool) | length) != 0
+  when: ansible_facts['zfs_pools'] is defined and __zfs_root_pool is defined and (ansible_facts['zfs_pools'] | selectattr('name', '==', __zfs_root_pool) | length) != 0
   vars:
     __zfs_root_pool: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_pool') }}"
     __zfs_root_dataset: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_dataset') }}"

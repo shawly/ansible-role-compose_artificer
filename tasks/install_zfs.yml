@@ -12,8 +12,8 @@
         name: "{{ __zfs_root_dataset }}{{ __dataset }}"
         state: present
       when:
-        - ansible_zfs_datasets is defined
-        - ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length
+        - ansible_facts['zfs_datasets'] is defined
+        - ansible_facts['zfs_datasets'] | selectattr('name', '==', __zfs_root_dataset) | length > 0
       loop: "{{ __zfs_datasets }}"
       loop_control:
         loop_var: __dataset
@@ -28,8 +28,8 @@
       when:
         - not __zfs_skip_snapshot
         - not __maintenance
-        - ansible_zfs_datasets is defined
-        - ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length
+        - ansible_facts['zfs_datasets'] is defined
+        - ansible_facts['zfs_datasets'] | selectattr('name', '==', __zfs_root_dataset) | length > 0
       loop: "{{ __all_datasets }}"
       loop_control:
         loop_var: __dataset

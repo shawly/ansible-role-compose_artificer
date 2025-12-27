@@ -12,7 +12,7 @@
       become: true
       ansible.builtin.import_tasks: install_zfs.yml
       when:
-        - ansible_zfs_datasets is defined
+        - ansible_facts['zfs_datasets'] is defined
 
     - name: install | Execute btrfs tasks for {{ __compose_artificer_compose_project_name }}
       become: true

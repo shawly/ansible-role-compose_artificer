@@ -38,8 +38,8 @@
         state: present
       when:
         - __compose_artificer_migrate_dir_result.stat.exists
-        - ansible_zfs_datasets is defined
-        - ansible_zfs_datasets | selectattr('name', '==', __zfs_root_dataset) | length
+        - ansible_facts['zfs_datasets'] is defined
+        - ansible_facts['zfs_datasets'] | selectattr('name', '==', __zfs_root_dataset) | length > 0
       loop: "{{ __datasets }}"
       loop_control:
         loop_var: __dataset
