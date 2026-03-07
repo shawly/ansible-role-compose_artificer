@@ -81,7 +81,7 @@
       _maintenance: false
 
 - name: set_facts | Unraid block
-  when: ansible_distribution == 'Unraid'
+  when: ansible_facts['distribution'] == 'Unraid'
   block:
     - name: set_facts | Set UnRAID composeman specific variables for {{ __compose_artificer_compose_project_name }}
       ansible.builtin.set_fact:

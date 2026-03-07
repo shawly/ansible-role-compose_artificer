@@ -23,7 +23,7 @@
     - name: install_zfs | Create snapshot of datasets for {{ __compose_artificer_compose_project_name }}
       become: true
       community.general.zfs:
-        name: "{{ __zfs_root_dataset }}{{ __dataset }}@ansible-{{ ansible_date_time.iso8601_basic_short }}"
+        name: "{{ __zfs_root_dataset }}{{ __dataset }}@ansible-{{ ansible_facts['date_time']['iso8601_basic_short'] }}"
         state: present
       when:
         - not __zfs_skip_snapshot

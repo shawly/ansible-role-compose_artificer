@@ -50,7 +50,7 @@
     - name: install | Install UnRAID files for {{ __compose_artificer_compose_project_name }}
       become: true
       ansible.builtin.import_tasks: install_unraid.yml
-      when: ansible_distribution == 'Unraid'
+      when: ansible_facts['distribution'] == 'Unraid'
   rescue:
     - name: install | An error occurred on installation for {{ __compose_artificer_compose_project_name }}
       ansible.builtin.debug:
