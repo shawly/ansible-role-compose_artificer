@@ -12,4 +12,4 @@
     __maintenance: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_maintenance') }}"
     __compose_files: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_files', default=omit) }}"
     __force_restart: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_force_restart', default=false) }}"
-  when: __force_restart or (not (__compose_artificer_compose_file.changed or __compose_artificer_compose_up.changed) and not __maintenance)
+  when: __force_restart or (not (__compose_artificer_compose_file is defined and (__compose_artificer_compose_file.changed or __compose_artificer_compose_up.changed)) and not __maintenance)
