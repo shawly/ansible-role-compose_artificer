@@ -113,7 +113,8 @@
     - name: migrate | Confirm message for {{ __compose_artificer_compose_project_name }}
       ansible.builtin.debug:
         msg: Data migrated from {{ __migrate_dir }} to {{ __compose_install_dir.dir }}
-      when: (__compose_artificer_migration_data.changed or __compose_artificer_migration_compose_file.changed)
+      when:
+        (__compose_artificer_migration_data.changed or __compose_artificer_migration_compose_file.changed)
         and __compose_artificer_migrate_dir_result.stat.exists
       changed_when: __compose_artificer_migration_data.changed or __compose_artificer_migration_compose_file.changed
   rescue:
