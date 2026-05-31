@@ -35,6 +35,12 @@ compose_artificer_default_btrfs_filesystem_label: data # label of the btrfs file
 compose_artificer_default_btrfs_subvolume_prefix: "@" # prefix for btrfs subvolumes, the @ is a SUSE convention, but you can use any prefix you like or none at all
 compose_artificer_default_btrfs_default_mount_options: "defaults,compress=zstd,noatime" # default mount options for btrfs subvolumes
 
+# default down/destroy settings
+compose_artificer_default_down_snapshots_keep: 1 # number of latest snapshots to keep per subvolume/dataset when pruning on `_down`
+compose_artificer_default_down_remove_orphans: true # remove orphaned containers on `_down`/`_destroy`
+compose_artificer_default_down_remove_images: all # remove images on `_down`/`_destroy` (all | local), set to omit to keep images
+compose_artificer_default_down_remove_volumes: false # remove named volumes on `_down` (always removed on `_destroy`)
+
 # default dir settings
 compose_artificer_default_dir_owner: root
 compose_artificer_default_dir_group: root

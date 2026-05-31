@@ -1,0 +1,55 @@
+---
+- name: down_zfs | Block
+  vars:
+    __zfs_root_dataset: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_root_dataset') }}"
+    __zfs_datasets: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
+    __zfs_additional_datasets: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_zfs_additional_datasets', default=[]) }}"
+    __snapshots_keep: "{{ __compose_artificer_snapshots_keep | default(1) | int }}"
+  block:
+    - name: down_zfs | List snapshots for datasets of {{ __compose_artificer_compose_project_name }}
+      become: true
+      ansible.builtin.command:
+        cmd: "zfs list -H -t snapshot -o name -s creation {{ __zfs_root_dataset }}{{ __dataset }}"
+      changed_when: false
+      failed_when: false
+      when:
+        - ansible_facts['zfs_datasets'] is defined
+        - ansible_facts['zfs_datasets'] | selectattr('name', '==', __zfs_root_dataset) | length > 0
+      loop: "{{ __all_datasets }}"
+      loop_control:
+        loop_var: __dataset
+      vars:
+        __all_datasets: "{{ __zfs_datasets + __zfs_additional_datasets | sort }}"
+      register: __compose_artificer_zfs_snapshot_lists
+
+    - name: down_zfs | Reset prune list for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.set_fact:
+        __compose_artificer_zfs_snapshots_to_prune: []
+
+    # keep the latest __snapshots_keep snapshots per dataset by dropping them from the (oldest-first) list
+    - name: down_zfs | Build snapshot prune list for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.set_fact:
+        __compose_artificer_zfs_snapshots_to_prune: "{{ __compose_artificer_zfs_snapshots_to_prune + __prunable }}"
+      loop: "{{ __compose_artificer_zfs_snapshot_lists.results | default([]) }}"
+      loop_control:
+        loop_var: __snapshot_list
+        label: "{{ __snapshot_list.__dataset | default('') }}"
+      when: __snapshot_list.stdout_lines is defined
+      vars:
+        # only ever prune snapshots this role created (named <dataset>@ansible-<timestamp>)
+        __ansible_snapshots: "{{ __snapshot_list.stdout_lines | default([]) | select('search', '@ansible-') | list }}"
+        __prune_count: "{{ [(__ansible_snapshots | length) - __snapshots_keep, 0] | max }}"
+        __prunable: "{{ __ansible_snapshots[:__prune_count | int] }}"
+
+    - name: down_zfs | Destroy old snapshots for {{ __compose_artificer_compose_project_name }}
+      become: true
+      community.general.zfs:
+        name: "{{ __snapshot }}"
+        state: absent
+      loop: "{{ __compose_artificer_zfs_snapshots_to_prune }}"
+      loop_control:
+        loop_var: __snapshot
+  rescue:
+    - name: down_zfs | ZFS snapshot pruning failed for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"

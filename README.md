@@ -85,6 +85,8 @@ The role should be used with the `ansible.builtin.import_role` task from within 
     name: shawly.compose_artificer
     tasks_from: set_facts
   tags:
+    - myrole
+    - compose_artificer
     - myrole_migrate
     - myrole_install
     - myrole_run
@@ -96,6 +98,8 @@ The role should be used with the `ansible.builtin.import_role` task from within 
   vars:
     myrole_migrate_dir: "/old/path/to/migrate/from"
   tags:
+    - myrole
+    - compose_artificer
     - myrole_migrate
 
 - name: Install files for {{ role_name }}
@@ -103,6 +107,8 @@ The role should be used with the `ansible.builtin.import_role` task from within 
     name: shawly.compose_artificer
     tasks_from: install
   tags:
+    - myrole
+    - compose_artificer
     - myrole_install
 
 - name: Run services for {{ role_name }}
@@ -110,8 +116,48 @@ The role should be used with the `ansible.builtin.import_role` task from within 
     name: shawly.compose_artificer
     tasks_from: run
   tags:
+    - myrole
+    - compose_artificer
     - myrole_run
 ```
+
+The `myrole` tag deploys just this service and `compose_artificer` deploys every artificer-based service; both live on
+the deploy tasks/blocks above. **Never put these tags at the _play_ level** - Ansible copies play-level tags onto every
+task in the play, including the `never`-guarded teardown blocks below, which overrides `never` and would let
+`--tags myrole`/`compose_artificer` trigger a destroy. Keep the play untagged and tag the blocks instead.
+
+In addition to the `migrate`/`install`/`run` task files, two teardown task files are available for retiring a service.
+Because an untagged Ansible run executes every task regardless of its tags, the teardown blocks in the skeleton are
+guarded with the special `never` tag so they only ever run when their tag is explicitly requested:
+
+```yaml
+- name: Shut down services for {{ role_name }}
+  ansible.builtin.import_role:
+    name: shawly.compose_artificer
+    tasks_from: down
+  tags:
+    - never
+    - myrole_down
+
+- name: Destroy services and data for {{ role_name }}
+  ansible.builtin.import_role:
+    name: shawly.compose_artificer
+    tasks_from: destroy
+  tags:
+    - never
+    - myrole_destroy
+```
+
+- `ansible-playbook ... --tags myrole_down` runs `docker compose down` (removing orphans and images, keeping named
+  volumes by default) and prunes the project's snapshots, keeping only the latest
+  `myrole_down_snapshots_keep` (default `1`) per subvolume/dataset. Project directories, datasets/subvolumes and the
+  `docker-compose.yml` are left intact.
+- `ansible-playbook ... --tags myrole_destroy` runs `docker compose down` (also removing named volumes), removes **all**
+  snapshots and wipes the project's btrfs subvolumes / zfs datasets and project directories. This is destructive and
+  irreversible.
+
+> The `set_facts` block in the skeleton also carries the `myrole_down`/`myrole_destroy` tags (without `never`) so the
+> required facts are set up when a teardown tag is selected.
 
 The next requirement is a `docker-compose.yml` inside your role's `vars/` directory that contains your compose stack. To
 get all that set up quickly, you can use the
@@ -261,6 +307,10 @@ The following hook task files are available in the skeleton:
 - **`tasks/post_install.yml`** - Executed after creating directories and installing compose files
 - **`tasks/pre_run.yml`** - Executed before starting/restarting the Docker Compose stack
 - **`tasks/post_run.yml`** - Executed after starting/restarting the Docker Compose stack
+- **`tasks/pre_down.yml`** - Executed before shutting the stack down and pruning snapshots (`_down` tag)
+- **`tasks/post_down.yml`** - Executed after shutting the stack down and pruning snapshots (`_down` tag)
+- **`tasks/pre_destroy.yml`** - Executed before wiping the stack and its data (`_destroy` tag)
+- **`tasks/post_destroy.yml`** - Executed after wiping the stack and its data (`_destroy` tag)
 
 Each hook task file is included conditionally based on its existence, so you only need to implement the hooks you
 actually use. By default, all hook files contain simple debug messages to provide visibility into the execution flow.
@@ -302,6 +352,16 @@ This is a list of all role variables for `shawly.compose_artificer`:
   - Default: `@`
 - `compose_artificer_default_btrfs_default_mount_options`: Default mount options for BTRFS subvolumes, keep in mind that changing this affects all subvolumes on that partition!
   - Default: `defaults,compress=zstd,noatime`
+- `compose_artificer_default_down_snapshots_keep`: Number of latest snapshots to keep per subvolume/dataset when pruning
+  on `_down`.
+  - Default: `1`
+- `compose_artificer_default_down_remove_orphans`: Whether to remove orphaned containers on `_down`/`_destroy`.
+  - Default: `true`
+- `compose_artificer_default_down_remove_images`: Which images to remove on `_down`/`_destroy` (`all` or `local`).
+  - Default: `all`
+- `compose_artificer_default_down_remove_volumes`: Whether to remove named volumes on `_down` (always removed on
+  `_destroy`).
+  - Default: `false`
 
 ### Role-specific Variables
 
@@ -327,6 +387,10 @@ When using this role, you can also configure additional variables in your depend
 - `{role_prefix}_maintenance`: Enable maintenance mode (skips snapshots and some operations).
 - `{role_prefix}_migrate_dir`: Path to migrate data from (triggers migration functionality).
 - `{role_prefix}_compose_files`: Custom compose file names to use (default: docker-compose.yml).
+- `{role_prefix}_down_snapshots_keep`: Number of latest snapshots to keep when pruning on `_down` (default: `1`).
+- `{role_prefix}_down_remove_orphans`: Remove orphaned containers on `_down`/`_destroy` (default: `true`).
+- `{role_prefix}_down_remove_images`: Which images to remove on `_down`/`_destroy`, `all` or `local` (default: `all`).
+- `{role_prefix}_down_remove_volumes`: Remove named volumes on `_down`; always removed on `_destroy` (default: `false`).
 
 #### UnRAID-specific Configuration
 

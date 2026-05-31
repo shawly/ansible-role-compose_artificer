@@ -79,6 +79,10 @@
       _traefik_subdomain: "{{ __compose_artificer_compose_project_name | replace('_', '-') }}"
       _traefik_port: "80"
       _maintenance: false
+      _down_snapshots_keep: "{{ compose_artificer_default_down_snapshots_keep }}"
+      _down_remove_orphans: "{{ compose_artificer_default_down_remove_orphans }}"
+      _down_remove_images: "{{ compose_artificer_default_down_remove_images }}"
+      _down_remove_volumes: "{{ compose_artificer_default_down_remove_volumes }}"
 
 - name: set_facts | Unraid block
   when: ansible_facts['distribution'] == 'Unraid'

@@ -1,0 +1,62 @@
+---
+- name: destroy | Block
+  vars:
+    __compose_install_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_install_dir') }}"
+    __compose_project_root_dir: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_project_root_dir') }}"
+    __compose_files: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_files', default=omit) }}"
+    __compose_profiles: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_profiles', default=omit) }}"
+    __compose_project_dirs: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_compose_project_dirs') }}"
+    __down_remove_images: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_down_remove_images', default=omit) }}"
+    # destroy removes every snapshot, regardless of the configured keep count
+    __compose_artificer_snapshots_keep: 0
+  block:
+    - name: destroy | Shut down and remove services, volumes and images for {{ __compose_artificer_compose_project_name }}
+      become: true
+      community.docker.docker_compose_v2:
+        project_src: "{{ __compose_install_dir.dir }}"
+        state: "absent"
+        remove_orphans: true
+        remove_images: "{{ __down_remove_images | default(omit) }}"
+        remove_volumes: true
+        files: "{{ __compose_files | default(omit) }}"
+        profiles: "{{ __compose_profiles | default(omit) }}"
+      register: __compose_artificer_compose_destroy
+      failed_when: false
+
+    - name: destroy | Remove all zfs snapshots for {{ __compose_artificer_compose_project_name }}
+      become: true
+      ansible.builtin.import_tasks: down_zfs.yml
+      when:
+        - ansible_facts['zfs_datasets'] is defined
+
+    - name: destroy | Remove all btrfs snapshots for {{ __compose_artificer_compose_project_name }}
+      become: true
+      ansible.builtin.import_tasks: down_btrfs.yml
+      when:
+        - __compose_artificer_btrfs_info is defined
+
+    - name: destroy | Destroy zfs datasets for {{ __compose_artificer_compose_project_name }}
+      become: true
+      ansible.builtin.import_tasks: destroy_zfs.yml
+      when:
+        - ansible_facts['zfs_datasets'] is defined
+
+    - name: destroy | Destroy btrfs subvolumes for {{ __compose_artificer_compose_project_name }}
+      become: true
+      ansible.builtin.import_tasks: destroy_btrfs.yml
+      when:
+        - __compose_artificer_btrfs_info is defined
+
+    - name: destroy | Remove project directories for {{ __compose_artificer_compose_project_name }}
+      become: true
+      ansible.builtin.file:
+        path: "{{ __folder.value.dir | mandatory }}"
+        state: absent
+      loop: "{{ __compose_project_dirs | dict2items }}"
+      loop_control:
+        label: "{{ __folder.value.dir | mandatory }}"
+        loop_var: __folder
+  rescue:
+    - name: destroy | Failure during destroy for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"

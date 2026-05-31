@@ -1,0 +1,54 @@
+---
+- name: down_btrfs | Block
+  vars:
+    __btrfs_filesystem_label: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_filesystem_label') }}"
+    __btrfs_subvolume_prefix: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_subvolume_prefix') }}"
+    __btrfs_subvolumes: "{{ [__compose_install_dir.dir, __compose_project_root_dir.dir] if __compose_install_dir.dir != __compose_project_root_dir.dir else [__compose_install_dir.dir] }}"
+    __btrfs_additional_subvolumes: "{{ lookup('vars', __compose_artificer_parent_role_prefix + '_btrfs_additional_subvolumes', default=[]) }}"
+    __snapshots_keep: "{{ __compose_artificer_snapshots_keep | default(1) | int }}"
+  block:
+    - name: down_btrfs | Reset prune list for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.set_fact:
+        __compose_artificer_btrfs_snapshots_to_prune: []
+
+    # snapshots are named <subvolume>.snap.<timestamp>, keep the latest __snapshots_keep per subvolume
+    - name: down_btrfs | Build snapshot prune list for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.set_fact:
+        __compose_artificer_btrfs_snapshots_to_prune: "{{ __compose_artificer_btrfs_snapshots_to_prune + __prunable }}"
+      when:
+        - __compose_artificer_btrfs_info is defined
+        - __compose_artificer_btrfs_info.filesystems is defined
+        - __compose_artificer_btrfs_info.filesystems | selectattr('label', '==', __btrfs_filesystem_label) | list | length > 0
+      loop: "{{ __all_subvolumes }}"
+      loop_control:
+        loop_var: __subvolume_path
+        label: "{{ __subvolume_path }}"
+      vars:
+        __all_subvolumes: "{{ __btrfs_subvolumes + __btrfs_additional_subvolumes | sort }}"
+        __filesystem: "{{ __compose_artificer_btrfs_info.filesystems | selectattr('label', '==', __btrfs_filesystem_label) | first }}"
+        # base subvolume name as created by install_btrfs.yml (e.g. @srv-foo)
+        __base: "{{ __btrfs_subvolume_prefix }}{{ __subvolume_path | regex_replace('^/', '') | replace('/', '-') }}"
+        __snapshots: >-
+          {{
+            __filesystem.subvolumes
+            | selectattr('path', 'match', '^/?' ~ (__base | regex_escape) ~ '\.snap\.[0-9T]+$')
+            | map(attribute='path')
+            | map('regex_replace', '^/', '')
+            | sort
+          }}
+        __prune_count: "{{ [(__snapshots | length) - __snapshots_keep, 0] | max }}"
+        __prunable: "{{ __snapshots[:__prune_count | int] }}"
+
+    - name: down_btrfs | Delete old snapshots for {{ __compose_artificer_compose_project_name }}
+      become: true
+      community.general.btrfs_subvolume:
+        name: "{{ __snapshot }}"
+        state: absent
+        filesystem_label: "{{ __btrfs_filesystem_label }}"
+      loop: "{{ __compose_artificer_btrfs_snapshots_to_prune }}"
+      loop_control:
+        loop_var: __snapshot
+  rescue:
+    - name: down_btrfs | BTRFS snapshot pruning failed for {{ __compose_artificer_compose_project_name }}
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_task }}"
